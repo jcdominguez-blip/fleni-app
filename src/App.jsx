@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { DATOS, SCALES, SCALE_KEYS } from "./scales.js";
 import { compartirExcel, descargarExcel } from "./exportar.js";
+import Splash from "./Splash.jsx";
 import "./App.css";
 
 const sum = (arr) => arr.reduce((a, b) => a + (typeof b === "number" ? b : 0), 0);
@@ -31,6 +32,7 @@ export default function App() {
 
   return (
     <div className="app">
+      <Splash />
       <header className="bar">
         <div className="brand">Fleni<span> App</span></div>
         <div className="titles">
