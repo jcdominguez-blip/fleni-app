@@ -180,7 +180,15 @@ export default function App() {
         )}
 
         {SCALE_KEYS.includes(tab) && (
-          <ScalePanel scale={SCALES[tab]} values={state[tab]} total={totals[tab]} onSet={(i, v) => setItem(tab, i, v)} />
+          <ScalePanel
+            scale={SCALES[tab]}
+            values={state[tab]}
+            total={totals[tab]}
+            hechos={cnt(state[tab])}
+            onSet={(i, v) => setItem(tab, i, v)}
+            onCompartir={onCompartir}
+            onDescargar={onDescargar}
+          />
         )}
 
         {tab === "resumen" && (
@@ -231,8 +239,9 @@ export default function App() {
   );
 }
 
-function ScalePanel({ scale, values, total, onSet }) {
+function ScalePanel({ scale, values, total, hechos, onSet, onCompartir, onDescargar }) {
   const opts = Array.from({ length: scale.max - scale.min + 1 }, (_, i) => scale.min + i);
+  const falta = scale.labels.length - hechos;
   return (
     <div>
       <div className="scalehead">
@@ -259,6 +268,20 @@ function ScalePanel({ scale, values, total, onSet }) {
             </div>
           </div>
         ))}
+      </div>
+
+      <div className="scalefoot">
+        <div className="scalefoot-txt">
+          <b>¿Terminaste {scale.name}?</b>
+          <span>
+            Exportá la evaluación hasta acá {falta > 0 ? `(faltan ${falta} ítems de esta escala) ` : ""}
+            para guardarla o pasar el turno.
+          </span>
+        </div>
+        <div className="scalefoot-btns">
+          <button className="btn solid" onClick={onCompartir}>Compartir Excel</button>
+          <button className="btn ghost" onClick={onDescargar}>Descargar .xlsx</button>
+        </div>
       </div>
     </div>
   );

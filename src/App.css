@@ -79,7 +79,14 @@
 .btn { font-size: 14px; font-weight: 700; border-radius: 8px; padding: 11px 15px; border: 1px solid transparent; }
 .btn.solid { background: var(--blue); color: var(--navy-deep); }
 .btn.ghost-dark { background: transparent; color: var(--white); border-color: rgba(255,255,255,.4); }
+.btn.ghost { background: transparent; color: var(--navy); border-color: var(--navy); }
 .btn:active { transform: translateY(1px); }
+
+/* CTA al pie de cada escala: exportar hasta ese punto */
+.scalefoot { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+.scalefoot-txt b { display: block; font-size: 14px; font-weight: 700; color: var(--ink); }
+.scalefoot-txt span { font-size: 12px; color: var(--muted); }
+.scalefoot-btns { display: flex; gap: 8px; flex-wrap: wrap; }
 
 /* Mobile */
 @media (max-width: 560px) {
@@ -88,4 +95,7 @@
   .field.wide { grid-column: span 1; }
   .cards { grid-template-columns: 1fr; }
   .exportbox { flex-direction: column; align-items: stretch; }
+  .scalefoot { flex-direction: column; align-items: stretch; }
+  .scalefoot-btns { flex-direction: column; }
+  .scalefoot-btns .btn { width: 100%; }
 }
