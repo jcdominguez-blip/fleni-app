@@ -44,6 +44,39 @@ export function construirWorkbook(datos, state, totals) {
   return wb;
 }
 
+// Lee un .xlsx exportado por la app (hoja "Registro") y reconstruye el estado
+// para continuar una evaluación cargada parcialmente en otro turno/dispositivo.
+export async function importarExcel(file) {
+  const buf = await file.arrayBuffer();
+  const wb = XLSX.read(buf, { type: "array" });
+  const ws = wb.Sheets["Registro"];
+  if (!ws) {
+    throw new Error("El archivo no tiene la hoja 'Registro'. Subí un .xlsx exportado por la app.");
+  }
+  const filas = XLSX.utils.sheet_to_json(ws, { defval: "" });
+  const rec = filas[0];
+  if (!rec) throw new Error("La hoja 'Registro' está vacía.");
+
+  const datos = Object.fromEntries(
+    DATOS.map(([k]) => [k, rec[k] != null && rec[k] !== "" ? String(rec[k]) : ""])
+  );
+
+  const leerEscala = (key, labels) =>
+    labels.map((_, i) => {
+      const v = rec[`${key}_${i + 1}`];
+      if (v === "" || v == null) return "";
+      const n = Number(v);
+      return Number.isFinite(n) ? n : "";
+    });
+
+  return {
+    datos,
+    covs: leerEscala("covs", COVS),
+    bbs: leerEscala("bbs", BBS),
+    fga: leerEscala("fga", FGA),
+  };
+}
+
 export function nombreArchivo(datos) {
   const base = (datos.apellidoNombre || "paciente").replace(/[^\w]+/g, "_");
   const fecha = datos.fechaEval || new Date().toISOString().slice(0, 10);
