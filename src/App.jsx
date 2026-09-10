@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
-import { DATOS, SCALES, SCALE_KEYS } from "./scales.js";
-import { compartirExcel, descargarExcel, importarExcel, mergeRegistros, maxEscala } from "./exportar.js";
+import { DATOS, MEDICION, SCALES, SCALE_KEYS } from "./scales.js";
+import { compartirExcel, descargarExcel, importarExcel, mergeRegistros } from "./exportar.js";
 import Splash from "./Splash.jsx";
 import ProgresoPanel from "./ProgresoPanel.jsx";
 import "./App.css";
@@ -9,11 +9,11 @@ const sum = (arr) => arr.reduce((a, b) => a + (typeof b === "number" ? b : 0), 0
 const cnt = (arr) => arr.filter((x) => typeof x === "number").length;
 const hoyISO = () => new Date().toISOString().slice(0, 10);
 const datosVacios = () => Object.fromEntries(DATOS.map((d) => [d[0], ""]));
+const medicionVacia = () => Object.fromEntries(MEDICION.map((m) => [m[0], ""]));
 
 // Icono Material Symbols (Rounded)
 const Mi = ({ name, className = "" }) => <span className={"mi " + className} aria-hidden="true">{name}</span>;
 
-// Tag de estado reutilizable (Default / Processing / Success / Warning / Error)
 function Tag({ variant = "default", icon, children }) {
   return (
     <span className={`tag tag--${variant}`}>
@@ -23,7 +23,6 @@ function Tag({ variant = "default", icon, children }) {
   );
 }
 
-// Estado de una escala según ítems cargados
 function estadoEscala(hechos, total) {
   if (hechos === 0) return { variant: "default", icon: "remove", label: "Sin empezar" };
   if (hechos < total) return { variant: "processing", icon: "autorenew", label: "En progreso" };
@@ -32,14 +31,15 @@ function estadoEscala(hechos, total) {
 
 const STORAGE_KEY = "fleni-eval-progreso-v2";
 
-// Normaliza un array guardado a la longitud esperada de la escala.
 const normArr = (a, len) => {
   const base = Array(len).fill("");
   if (Array.isArray(a)) for (let i = 0; i < len; i++) base[i] = a[i] ?? "";
   return base;
 };
+// Construye el objeto de escalas normalizado desde una fuente (guardado o registro).
+const initEscalas = (src) =>
+  Object.fromEntries(SCALE_KEYS.map((k) => [k, normArr(src?.[k], SCALES[k].labels.length)]));
 
-// Lee el progreso autoguardado en este dispositivo (localStorage).
 function cargarGuardado() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -51,92 +51,104 @@ function cargarGuardado() {
   }
 }
 
+// Grilla de campos reutilizable (Paciente / Medición)
+function CamposGrid({ defs, valores, onChange }) {
+  return (
+    <div className="grid">
+      {defs.map(([k, l, t, opts]) => (
+        <label key={k} className={"field" + (k === "apellidoNombre" || k === "etiologia" ? " wide" : "")}>
+          <span>{l}</span>
+          {t === "select" ? (
+            <select value={valores[k] ?? ""} onChange={(e) => onChange(k, e.target.value)}>
+              {opts.map((o) => <option key={o} value={o}>{o || "—"}</option>)}
+            </select>
+          ) : (
+            <input type={t} value={valores[k] ?? ""} onChange={(e) => onChange(k, e.target.value)} />
+          )}
+        </label>
+      ))}
+    </div>
+  );
+}
+
 export default function App() {
-  const [guardado] = useState(cargarGuardado); // lazy: corre una sola vez
+  const [guardado] = useState(cargarGuardado);
   const fileRef = useRef(null);
 
   const [tab, setTab] = useState("paciente");
-  const [datos, setDatos] = useState(() => guardado?.datos ?? datosVacios());
-  const [covs, setCovs] = useState(() => normArr(guardado?.covs, SCALES.covs.labels.length));
-  const [bbs, setBbs] = useState(() => normArr(guardado?.bbs, SCALES.bbs.labels.length));
-  const [fga, setFga] = useState(() => normArr(guardado?.fga, SCALES.fga.labels.length));
-  // historial: evaluaciones anteriores (para comparar el progreso entre fechas)
+  const [datos, setDatos] = useState(() => ({ ...datosVacios(), ...(guardado?.datos || {}) }));
+  const [medicion, setMedicion] = useState(() => ({ ...medicionVacia(), ...(guardado?.medicion || {}) }));
+  const [escalas, setEscalas] = useState(() => initEscalas(guardado?.escalas || guardado || {}));
   const [historial, setHistorial] = useState(() => (Array.isArray(guardado?.historial) ? guardado.historial : []));
   const [ultimaImportada, setUltimaImportada] = useState(null);
 
   const [restaurado, setRestaurado] = useState(!!guardado);
   const [aviso, setAviso] = useState("");
 
-  const state = { covs, bbs, fga };
-  const setters = { covs: setCovs, bbs: setBbs, fga: setFga };
-  const totals = useMemo(() => ({ covs: sum(covs), bbs: sum(bbs), fga: sum(fga) }), [covs, bbs, fga]);
+  const totals = useMemo(
+    () => Object.fromEntries(SCALE_KEYS.map((k) => [k, sum(escalas[k])])),
+    [escalas]
+  );
   const completa = useMemo(
-    () => Object.fromEntries(SCALE_KEYS.map((k) => [k, cnt(state[k]) === SCALES[k].labels.length])),
-    [covs, bbs, fga] // eslint-disable-line react-hooks/exhaustive-deps
+    () => Object.fromEntries(SCALE_KEYS.map((k) => [k, cnt(escalas[k]) === SCALES[k].labels.length])),
+    [escalas]
   );
 
-  // Registros comparables: historial + evaluación actual (unidos por fecha)
-  const registros = useMemo(
-    () => mergeRegistros(historial, { datos, covs, bbs, fga, totals }),
-    [historial, datos, covs, bbs, fga, totals]
-  );
+  const actual = useMemo(() => ({ datos, medicion, ...escalas, totals }), [datos, medicion, escalas, totals]);
+  const registros = useMemo(() => mergeRegistros(historial, actual), [historial, actual]);
 
-  // Autoguardado: guarda el progreso en este dispositivo ante cada cambio.
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ datos, covs, bbs, fga, historial }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ datos, medicion, escalas, historial }));
     } catch {
       /* almacenamiento no disponible */
     }
-  }, [datos, covs, bbs, fga, historial]);
+  }, [datos, medicion, escalas, historial]);
 
   const setItem = (key, i, v) => {
-    const n = [...state[key]];
-    n[i] = v;
-    setters[key](n);
+    setEscalas((prev) => {
+      const arr = [...prev[key]];
+      arr[i] = v;
+      return { ...prev, [key]: arr };
+    });
   };
 
-  const filled = cnt(covs) + cnt(bbs) + cnt(fga);
+  const filled = SCALE_KEYS.reduce((a, k) => a + cnt(escalas[k]), 0);
   const totalItems = SCALE_KEYS.reduce((a, k) => a + SCALES[k].labels.length, 0);
 
-  const onCompartir = () => compartirExcel(datos, state, totals, historial);
-  const onDescargar = () => descargarExcel(datos, state, totals, historial);
-
+  const onCompartir = () => compartirExcel(actual, historial);
+  const onDescargar = () => descargarExcel(actual, historial);
   const abrirImport = () => fileRef.current?.click();
 
   const aplicarRegistro = (r) => {
     setDatos({ ...datosVacios(), ...r.datos });
-    setCovs(normArr(r.covs, SCALES.covs.labels.length));
-    setBbs(normArr(r.bbs, SCALES.bbs.labels.length));
-    setFga(normArr(r.fga, SCALES.fga.labels.length));
+    setMedicion({ ...medicionVacia(), ...(r.medicion || {}) });
+    setEscalas(initEscalas(r));
   };
 
   const onImportar = async (e) => {
     const file = e.target.files?.[0];
-    e.target.value = ""; // permite re-subir el mismo archivo
+    e.target.value = "";
     if (!file) return;
     try {
       const { registros: regs } = await importarExcel(file);
       const ultima = regs[regs.length - 1];
-      // Todas las evaluaciones del archivo pasan al historial; se prepara una
-      // NUEVA medición (datos del paciente heredados, puntajes en blanco, fecha hoy).
+      // Todas las evaluaciones del archivo van al historial; se prepara una NUEVA medición.
       setHistorial(regs);
       setDatos({ ...datosVacios(), ...ultima.datos, fechaEval: hoyISO() });
-      setCovs(Array(SCALES.covs.labels.length).fill(""));
-      setBbs(Array(SCALES.bbs.labels.length).fill(""));
-      setFga(Array(SCALES.fga.labels.length).fill(""));
+      setMedicion(medicionVacia());
+      setEscalas(initEscalas({}));
       setUltimaImportada(ultima);
       setRestaurado(false);
       const fechas = regs.map((r) => r.datos.fechaEval || "s/f").join(", ");
       setAviso(
-        `Importé ${regs.length} evaluación(es) al historial (${fechas}). Cargá la nueva medición: al exportar vas a ver la comparación en la pestaña Progreso y en el Excel.`
+        `Importé ${regs.length} evaluación(es) al historial (${fechas}). Cargá la nueva medición: al exportar vas a ver la comparación en Progreso y en el Excel.`
       );
     } catch (err) {
       setAviso(err?.message || "No se pudo leer el archivo. Subí un .xlsx exportado por la app.");
     }
   };
 
-  // Caso "turnos": en vez de una nueva medición, continuar la última evaluación importada.
   const continuarUltima = () => {
     if (!ultimaImportada) return;
     aplicarRegistro(ultimaImportada);
@@ -147,19 +159,20 @@ export default function App() {
 
   const empezarDeCero = () => {
     setDatos(datosVacios());
-    setCovs(Array(SCALES.covs.labels.length).fill(""));
-    setBbs(Array(SCALES.bbs.labels.length).fill(""));
-    setFga(Array(SCALES.fga.labels.length).fill(""));
+    setMedicion(medicionVacia());
+    setEscalas(initEscalas({}));
     setHistorial([]);
     setUltimaImportada(null);
     setRestaurado(false);
     setAviso("");
-    try {
-      localStorage.removeItem(STORAGE_KEY);
-    } catch {
-      /* noop */
-    }
+    try { localStorage.removeItem(STORAGE_KEY); } catch { /* noop */ }
   };
+
+  const TABS = [
+    ["paciente", "Paciente"], ["covs", "COVS"], ["abs", "ABS"], ["ampac", "AM-PAC"],
+    ["bbs", "Berg"], ["fga", "FGA"], ["himat", "HIMAT"], ["medicion", "Medición"],
+    ["resumen", "Resumen"], ["progreso", "Progreso"],
+  ];
 
   return (
     <div className="app">
@@ -205,46 +218,40 @@ export default function App() {
       )}
 
       <nav className="tabs">
-        {[["paciente", "Paciente"], ["covs", "COVS"], ["bbs", "Berg"], ["fga", "FGA"], ["resumen", "Resumen"], ["progreso", "Progreso"]].map(
-          ([k, l]) => (
-            <button
-              key={k}
-              className={"tab" + (tab === k ? " on" : "") + (completa[k] ? " done" : "")}
-              onClick={() => setTab(k)}
-            >
-              {k === "progreso" && <Mi name="trending_up" className="sm" />}
-              {l}
-              {SCALE_KEYS.includes(k) && <b>{completa[k] ? "✓" : totals[k]}</b>}
-              {k === "progreso" && historial.length > 0 && <b>{registros.length}</b>}
-            </button>
-          )
-        )}
+        {TABS.map(([k, l]) => (
+          <button
+            key={k}
+            className={"tab" + (tab === k ? " on" : "") + (completa[k] ? " done" : "")}
+            onClick={() => setTab(k)}
+          >
+            {k === "progreso" && <Mi name="trending_up" className="sm" />}
+            {l}
+            {SCALE_KEYS.includes(k) && <b>{completa[k] ? "✓" : totals[k]}</b>}
+            {k === "progreso" && historial.length > 0 && <b>{registros.length}</b>}
+          </button>
+        ))}
       </nav>
 
       <main className="panel">
         {tab === "paciente" && (
-          <div className="grid">
-            {DATOS.map(([k, l, t, opts]) => (
-              <label key={k} className={"field" + (k === "apellidoNombre" || k === "etiologia" ? " wide" : "")}>
-                <span>{l}</span>
-                {t === "select" ? (
-                  <select value={datos[k]} onChange={(e) => setDatos({ ...datos, [k]: e.target.value })}>
-                    {opts.map((o) => <option key={o} value={o}>{o || "—"}</option>)}
-                  </select>
-                ) : (
-                  <input type={t} value={datos[k]} onChange={(e) => setDatos({ ...datos, [k]: e.target.value })} />
-                )}
-              </label>
-            ))}
-          </div>
+          <CamposGrid defs={DATOS} valores={datos} onChange={(k, v) => setDatos({ ...datos, [k]: v })} />
+        )}
+
+        {tab === "medicion" && (
+          <>
+            <p className="prog-intro">
+              Mediciones funcionales (Nivel de RLA y pruebas de marcha). Se registran por evaluación y viajan en el Excel.
+            </p>
+            <CamposGrid defs={MEDICION} valores={medicion} onChange={(k, v) => setMedicion({ ...medicion, [k]: v })} />
+          </>
         )}
 
         {SCALE_KEYS.includes(tab) && (
           <ScalePanel
             scale={SCALES[tab]}
-            values={state[tab]}
+            values={escalas[tab]}
             total={totals[tab]}
-            hechos={cnt(state[tab])}
+            hechos={cnt(escalas[tab])}
             onSet={(i, v) => setItem(tab, i, v)}
             onCompartir={onCompartir}
             onDescargar={onDescargar}
@@ -255,7 +262,7 @@ export default function App() {
           <div className="resumen">
             <div className="cards">
               {SCALE_KEYS.map((k) => {
-                const hechos = cnt(state[k]);
+                const hechos = cnt(escalas[k]);
                 const total = SCALES[k].labels.length;
                 const falta = total - hechos;
                 const est = estadoEscala(hechos, total);

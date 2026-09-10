@@ -1,24 +1,15 @@
 import * as XLSX from "xlsx";
 import ExcelJS from "exceljs";
-import { DATOS, SCALES, SCALE_KEYS, COVS, BBS, FGA } from "./scales.js";
+import { DATOS, MEDICION, SCALES, SCALE_KEYS } from "./scales.js";
 
 // Paleta (ARGB para ExcelJS)
 const C = {
-  blue: "FF0069FF",
-  blueSoft: "FFE6F0FF",
-  green: "FF00DA89",
-  greenSoft: "FFE4FAF1",
-  ink: "FF1C2024",
-  muted: "FF667085",
-  line: "FFE6E8EB",
-  surface: "FFF4F6F8",
-  white: "FFFFFFFF",
+  blue: "FF0069FF", blueSoft: "FFE6F0FF", green: "FF00DA89", greenSoft: "FFE4FAF1",
+  ink: "FF1C2024", muted: "FF667085", line: "FFE6E8EB", surface: "FFF4F6F8", white: "FFFFFFFF",
 };
 const fill = (argb) => ({ type: "pattern", pattern: "solid", fgColor: { argb } });
 const thin = { style: "thin", color: { argb: C.line } };
 const borderAll = { top: thin, left: thin, bottom: thin, right: thin };
-
-// Colores para series por fecha (hasta 6, luego cicla)
 const SERIE = ["#0069FF", "#00A56A", "#C77700", "#7A5AF8", "#E5484D", "#0BA5C1"];
 
 export const maxEscala = (key) => SCALES[key].labels.length * SCALES[key].max;
@@ -26,8 +17,7 @@ const totalsDe = (rec) =>
   Object.fromEntries(SCALE_KEYS.map((k) => [k, (rec[k] || []).reduce((a, b) => a + (typeof b === "number" ? b : 0), 0)]));
 const fechaDe = (rec) => (rec?.datos?.fechaEval || "").trim();
 
-// Une historial + evaluación actual: reemplaza si comparten fecha, si no agrega.
-// Devuelve la lista ordenada por fecha (las sin fecha, al final).
+// Une historial + evaluación actual: reemplaza si comparten fecha, si no agrega. Ordena por fecha.
 export function mergeRegistros(historial, actual) {
   const out = [...(historial || [])];
   const fa = fechaDe(actual);
@@ -43,18 +33,17 @@ export function mergeRegistros(historial, actual) {
 }
 
 // ───────────────────────────────────────────────────────────────────────────
-// Construye el .xlsx con estilos (ExcelJS). Devuelve un ArrayBuffer.
-export async function construirWorkbookBuffer(datos, state, totals, historial = []) {
+// actual = { datos, medicion, <covs>, <abs>, ..., totals }
+export async function construirWorkbookBuffer(actual, historial = []) {
+  const { datos, medicion = {}, totals } = actual;
   const wb = new ExcelJS.Workbook();
   wb.creator = "Fleni App";
   wb.created = new Date();
-
-  const actual = { datos, covs: state.covs, bbs: state.bbs, fga: state.fga, totals };
   const registros = mergeRegistros(historial, actual);
 
-  // ── Hoja Evaluación (la evaluación actual) ────────────────────────
+  // ── Hoja Evaluación ───────────────────────────────────────────────
   const ws = wb.addWorksheet("Evaluación", { views: [{ showGridLines: false }] });
-  ws.columns = [{ width: 46 }, { width: 16 }, { width: 16 }];
+  ws.columns = [{ width: 48 }, { width: 16 }, { width: 16 }];
 
   const titulo = ws.addRow(["Evaluación kinésica — FLENI"]);
   ws.mergeCells(titulo.number, 1, titulo.number, 3);
@@ -77,15 +66,20 @@ export async function construirWorkbookBuffer(datos, state, totals, historial = 
     r.getCell(1).alignment = { vertical: "middle", indent: 1 };
     r.height = 20;
   };
-
-  seccion("DATOS DEL PACIENTE", C.ink, C.surface);
-  DATOS.forEach(([k, l]) => {
-    const r = ws.addRow([l, datos[k] ?? ""]);
+  const parCampo = (l, v) => {
+    const r = ws.addRow([l, v ?? ""]);
     r.getCell(1).font = { name: "Arial", size: 10, color: { argb: C.muted } };
     r.getCell(2).font = { name: "Arial", size: 10, bold: true, color: { argb: C.ink } };
     r.getCell(1).border = borderAll;
     r.getCell(2).border = borderAll;
-  });
+  };
+
+  seccion("DATOS DEL PACIENTE", C.ink, C.surface);
+  DATOS.forEach(([k, l]) => parCampo(l, datos[k]));
+  ws.addRow([]);
+
+  seccion("MEDICIÓN FUNCIONAL", C.ink, C.surface);
+  MEDICION.forEach(([k, l]) => parCampo(l, medicion[k]));
   ws.addRow([]);
 
   SCALE_KEYS.forEach((key) => {
@@ -96,7 +90,7 @@ export async function construirWorkbookBuffer(datos, state, totals, historial = 
     head.getCell(2).font = { name: "Arial", bold: true, size: 9, color: { argb: C.muted } };
     head.getCell(2).alignment = { horizontal: "center" };
     s.labels.forEach((l, i) => {
-      const r = ws.addRow([`${i + 1}. ${l}`, state[key][i]]);
+      const r = ws.addRow([`${i + 1}. ${l}`, (actual[key] || [])[i]]);
       r.getCell(1).font = { name: "Arial", size: 10, color: { argb: C.ink } };
       r.getCell(2).font = { name: "Arial", size: 10, color: { argb: C.ink } };
       r.getCell(2).alignment = { horizontal: "center" };
@@ -113,13 +107,12 @@ export async function construirWorkbookBuffer(datos, state, totals, historial = 
     ws.addRow([]);
   });
 
-  // ── Hoja Registro (una fila por evaluación/fecha; fuente para reimportar) ──
+  // ── Hoja Registro (una fila por evaluación/fecha) ─────────────────
   const wr = wb.addWorksheet("Registro");
   const headers = [
     ...DATOS.map((d) => d[0]),
-    ...COVS.map((_, i) => `covs_${i + 1}`), "total_covs",
-    ...BBS.map((_, i) => `bbs_${i + 1}`), "total_bbs",
-    ...FGA.map((_, i) => `fga_${i + 1}`), "total_fga",
+    ...MEDICION.map((m) => m[0]),
+    ...SCALE_KEYS.flatMap((k) => [...SCALES[k].labels.map((_, i) => `${k}_${i + 1}`), `total_${k}`]),
   ];
   const hr = wr.addRow(headers);
   hr.font = { name: "Arial", bold: true, size: 9, color: { argb: C.white } };
@@ -128,30 +121,29 @@ export async function construirWorkbookBuffer(datos, state, totals, historial = 
     const t = r.totals || totalsDe(r);
     wr.addRow([
       ...DATOS.map((d) => r.datos[d[0]]),
-      ...r.covs, t.covs,
-      ...r.bbs, t.bbs,
-      ...r.fga, t.fga,
+      ...MEDICION.map((m) => (r.medicion || {})[m[0]] ?? ""),
+      ...SCALE_KEYS.flatMap((k) => [...(r[k] || []), t[k]]),
     ]);
   });
   wr.columns.forEach((col) => { col.width = 12; });
 
-  // ── Hoja Gráfico (comparativa por fecha) ──────────────────────────
+  // ── Hoja Gráfico ──────────────────────────────────────────────────
   const png = dibujarComparativaPNG(registros);
   if (png) {
     const wg = wb.addWorksheet("Gráfico", { views: [{ showGridLines: false }] });
     const t = wg.addRow([registros.length > 1 ? "Progreso por escala (comparativa)" : "Puntaje por escala"]);
     t.getCell(1).font = { name: "Arial", bold: true, size: 14, color: { argb: C.ink } };
     const imgId = wb.addImage({ base64: png, extension: "png" });
-    wg.addImage(imgId, { tl: { col: 0.2, row: 2.2 }, ext: { width: 760, height: 400 } });
+    wg.addImage(imgId, { tl: { col: 0.2, row: 2.2 }, ext: { width: 860, height: 400 } });
   }
 
   return wb.xlsx.writeBuffer();
 }
 
-// Dibuja barras agrupadas por escala, una barra por fecha (altura = % del máximo).
+// Barras agrupadas por escala, una barra por fecha (altura = % del máximo).
 function dibujarComparativaPNG(registros) {
   if (typeof document === "undefined") return null;
-  const W = 760, H = 400, s = 2;
+  const W = 860, H = 400, s = 2;
   const cv = document.createElement("canvas");
   cv.width = W * s; cv.height = H * s;
   const ctx = cv.getContext("2d");
@@ -163,7 +155,6 @@ function dibujarComparativaPNG(registros) {
   const plotW = W - pad.l - pad.r, plotH = H - pad.t - pad.b;
   const fechas = registros.map((r) => (r.datos.fechaEval || "s/f"));
 
-  // Grilla + eje % (0/50/100)
   ctx.strokeStyle = "#E6E8EB"; ctx.fillStyle = "#667085";
   ctx.font = "11px Arial"; ctx.textAlign = "right"; ctx.textBaseline = "middle";
   [0, 0.5, 1].forEach((f) => {
@@ -174,8 +165,8 @@ function dibujarComparativaPNG(registros) {
 
   const groupW = plotW / SCALE_KEYS.length;
   const n = registros.length;
-  const barW = Math.min(40, (groupW * 0.7) / n);
-  const innerGap = 4;
+  const barW = Math.min(30, (groupW * 0.72) / n);
+  const innerGap = 3;
   const clusterW = n * barW + (n - 1) * innerGap;
 
   SCALE_KEYS.forEach((k, gi) => {
@@ -187,23 +178,21 @@ function dibujarComparativaPNG(registros) {
       const x = gx - clusterW / 2 + ri * (barW + innerGap);
       ctx.fillStyle = SERIE[ri % SERIE.length];
       ctx.fillRect(x, pad.t + plotH - h, barW, h);
-      ctx.fillStyle = "#1C2024"; ctx.font = "bold 11px Arial";
+      ctx.fillStyle = "#1C2024"; ctx.font = "bold 10px Arial";
       ctx.textAlign = "center"; ctx.textBaseline = "bottom";
       ctx.fillText(String(t), x + barW / 2, pad.t + plotH - h - 2);
     });
-    ctx.fillStyle = "#667085"; ctx.font = "12px Arial";
+    ctx.fillStyle = "#667085"; ctx.font = "11px Arial";
     ctx.textAlign = "center"; ctx.textBaseline = "top";
     ctx.fillText(SCALES[k].name, gx, pad.t + plotH + 8);
   });
 
-  // Leyenda de fechas
   ctx.textAlign = "left"; ctx.textBaseline = "middle"; ctx.font = "11px Arial";
-  let lx = pad.l;
-  const ly = H - 20;
+  let lx = pad.l; const ly = H - 20;
   fechas.forEach((f, i) => {
     ctx.fillStyle = SERIE[i % SERIE.length]; ctx.fillRect(lx, ly - 6, 12, 12);
     ctx.fillStyle = "#667085"; ctx.fillText(f, lx + 18, ly);
-    lx += 18 + ctx.measureText(f).width + 22;
+    lx += 18 + ctx.measureText(f).width + 20;
   });
   ctx.fillStyle = "#9AA4B2"; ctx.font = "italic 10px Arial"; ctx.textAlign = "right";
   ctx.fillText("altura = % del máximo de cada escala", W - pad.r, ly);
@@ -211,8 +200,7 @@ function dibujarComparativaPNG(registros) {
   return cv.toDataURL("image/png").split(",")[1];
 }
 
-// Lee un .xlsx exportado por la app (hoja "Registro") y devuelve TODAS las
-// evaluaciones (una por fila) como registros {datos, covs, bbs, fga, totals}.
+// Lee un .xlsx exportado por la app (hoja "Registro"): todas las evaluaciones.
 export async function importarExcel(file) {
   const buf = await file.arrayBuffer();
   const wb = XLSX.read(buf, { type: "array" });
@@ -235,10 +223,11 @@ export async function importarExcel(file) {
     const datos = Object.fromEntries(
       DATOS.map(([k]) => [k, rec[k] != null && rec[k] !== "" ? String(rec[k]) : ""])
     );
-    const covs = leerEscala(rec, "covs", COVS);
-    const bbs = leerEscala(rec, "bbs", BBS);
-    const fga = leerEscala(rec, "fga", FGA);
-    const r = { datos, covs, bbs, fga };
+    const medicion = Object.fromEntries(
+      MEDICION.map(([k]) => [k, rec[k] != null && rec[k] !== "" ? String(rec[k]) : ""])
+    );
+    const r = { datos, medicion };
+    SCALE_KEYS.forEach((k) => { r[k] = leerEscala(rec, k, SCALES[k].labels); });
     r.totals = totalsDe(r);
     return r;
   });
@@ -252,16 +241,16 @@ export function nombreArchivo(datos) {
   return `evaluacion_${base}_${fecha}.xlsx`;
 }
 
-async function generarBlob(datos, state, totals, historial) {
-  const buffer = await construirWorkbookBuffer(datos, state, totals, historial);
+async function generarBlob(actual, historial) {
+  const buffer = await construirWorkbookBuffer(actual, historial);
   return new Blob([buffer], {
     type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   });
 }
 
-export async function descargarExcel(datos, state, totals, historial = []) {
-  const blob = await generarBlob(datos, state, totals, historial);
-  const nombre = nombreArchivo(datos);
+export async function descargarExcel(actual, historial = []) {
+  const blob = await generarBlob(actual, historial);
+  const nombre = nombreArchivo(actual.datos);
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -272,18 +261,18 @@ export async function descargarExcel(datos, state, totals, historial = []) {
   setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 
-export async function compartirExcel(datos, state, totals, historial = []) {
-  const blob = await generarBlob(datos, state, totals, historial);
-  const nombre = nombreArchivo(datos);
+export async function compartirExcel(actual, historial = []) {
+  const blob = await generarBlob(actual, historial);
+  const nombre = nombreArchivo(actual.datos);
   const file = new File([blob], nombre, { type: blob.type });
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
     try {
-      await navigator.share({ files: [file], title: "Evaluación kinésica", text: `Evaluación — ${datos.apellidoNombre || "paciente"}` });
+      await navigator.share({ files: [file], title: "Evaluación kinésica", text: `Evaluación — ${actual.datos.apellidoNombre || "paciente"}` });
       return true;
     } catch (err) {
       if (err && err.name === "AbortError") return false;
     }
   }
-  await descargarExcel(datos, state, totals, historial);
+  await descargarExcel(actual, historial);
   return false;
 }

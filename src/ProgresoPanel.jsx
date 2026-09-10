@@ -36,7 +36,10 @@ export default function ProgresoPanel({ registros, tieneHistorial, onImportar })
         const first = serie[0].val;
         const last = serie[serie.length - 1].val;
         const delta = last - first;
-        const dv = delta > 0 ? "success" : delta < 0 ? "warning" : "default";
+        // La dirección de "mejoría" depende de la escala (ej. ABS: más = peor)
+        const mejorSube = SCALES[k].mejorSube !== false;
+        const mejoro = delta === 0 ? 0 : (mejorSube ? (delta > 0 ? 1 : -1) : (delta < 0 ? 1 : -1));
+        const dv = mejoro > 0 ? "success" : mejoro < 0 ? "warning" : "default";
         const di = delta > 0 ? "trending_up" : delta < 0 ? "trending_down" : "trending_flat";
 
         return (
