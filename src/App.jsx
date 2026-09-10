@@ -7,6 +7,26 @@ import "./App.css";
 const sum = (arr) => arr.reduce((a, b) => a + (typeof b === "number" ? b : 0), 0);
 const cnt = (arr) => arr.filter((x) => typeof x === "number").length;
 
+// Icono Material Symbols (Rounded)
+const Mi = ({ name, className = "" }) => <span className={"mi " + className} aria-hidden="true">{name}</span>;
+
+// Tag de estado reutilizable (Default / Processing / Success / Warning / Error)
+function Tag({ variant = "default", icon, children }) {
+  return (
+    <span className={`tag tag--${variant}`}>
+      {icon && <Mi name={icon} />}
+      {children}
+    </span>
+  );
+}
+
+// Estado de una escala según ítems cargados
+function estadoEscala(hechos, total) {
+  if (hechos === 0) return { variant: "default", icon: "remove", label: "Sin empezar" };
+  if (hechos < total) return { variant: "processing", icon: "autorenew", label: "En progreso" };
+  return { variant: "success", icon: "check_circle", label: "Completa" };
+}
+
 const STORAGE_KEY = "fleni-eval-progreso-v1";
 const vacio = { datos: null, covs: null, bbs: null, fga: null };
 
@@ -119,6 +139,7 @@ export default function App() {
           <h1>Evaluación kinésica digital</h1>
         </div>
         <button className="barbtn" onClick={abrirImport} title="Continuar una planilla exportada">
+          <Mi name="upload_file" className="sm" />
           Importar
         </button>
         <input ref={fileRef} type="file" accept=".xlsx" hidden onChange={onImportar} />
@@ -134,13 +155,13 @@ export default function App() {
           {restaurado && (
             <div className="aviso">
               <span>Recuperamos una evaluación en curso en este dispositivo.</span>
-              <button onClick={empezarDeCero}>Empezar de cero</button>
+              <button onClick={empezarDeCero}><Mi name="restart_alt" className="sm" />Empezar de cero</button>
             </div>
           )}
           {aviso && (
             <div className="aviso">
               <span>{aviso}</span>
-              <button onClick={() => setAviso("")}>OK</button>
+              <button onClick={() => setAviso("")}><Mi name="close" className="sm" />OK</button>
             </div>
           )}
         </div>
@@ -198,16 +219,15 @@ export default function App() {
                 const hechos = cnt(state[k]);
                 const total = SCALES[k].labels.length;
                 const falta = total - hechos;
+                const est = estadoEscala(hechos, total);
                 return (
                   <div key={k} className={"card" + (completa[k] ? " done" : "")}>
-                    <div className="eyebrow">
-                      {SCALES[k].name}
-                      {completa[k] && <em className="chk">✓ completa</em>}
+                    <div className="card-top">
+                      <span className="card-name">{SCALES[k].name}</span>
+                      <Tag variant={est.variant} icon={est.icon}>{est.label}</Tag>
                     </div>
                     <div className="big">{totals[k]}</div>
-                    <div className="sub">
-                      {completa[k] ? "Todos los ítems" : `Faltan ${falta}`} · {hechos}/{total}
-                    </div>
+                    <div className="sub">{hechos}/{total} ítems{completa[k] ? "" : ` · faltan ${falta}`}</div>
                   </div>
                 );
               })}
@@ -222,9 +242,9 @@ export default function App() {
                 </p>
               </div>
               <div className="exportbtns">
-                <button className="btn solid" onClick={onCompartir}>Compartir Excel</button>
-                <button className="btn ghost-dark" onClick={onDescargar}>Descargar .xlsx</button>
-                <button className="btn ghost-dark" onClick={abrirImport}>Importar para continuar</button>
+                <button className="btn solid" onClick={onCompartir}><Mi name="ios_share" />Compartir Excel</button>
+                <button className="btn ghost-light" onClick={onDescargar}><Mi name="download" />Descargar .xlsx</button>
+                <button className="btn ghost-light" onClick={abrirImport}><Mi name="upload_file" />Importar para continuar</button>
               </div>
             </div>
 
@@ -279,8 +299,8 @@ function ScalePanel({ scale, values, total, hechos, onSet, onCompartir, onDescar
           </span>
         </div>
         <div className="scalefoot-btns">
-          <button className="btn solid" onClick={onCompartir}>Compartir Excel</button>
-          <button className="btn ghost" onClick={onDescargar}>Descargar .xlsx</button>
+          <button className="btn solid" onClick={onCompartir}><Mi name="ios_share" />Compartir Excel</button>
+          <button className="btn ghost" onClick={onDescargar}><Mi name="download" />Descargar .xlsx</button>
         </div>
       </div>
     </div>

@@ -1,17 +1,37 @@
 :root {
-  /* Paleta Fleni */
-  --navy:       #143A5E;   /* azul profundo */
-  --navy-deep:  #0E2B47;   /* navy más oscuro (hover / texto fuerte) */
-  --blue:       #4FA6CE;   /* celeste medio */
-  --blue-tint:  #E9F3FA;   /* tinte celeste (superficies suaves) */
+  /* Paleta corporativa Fleni App */
+  --blue:       #0069FF;   /* primario */
+  --blue-strong:#0052CC;   /* hover / pressed */
+  --blue-soft:  #E6F0FF;   /* tinte primario */
+  --green:      #00DA89;   /* acento */
+  --green-strong:#00A56A;  /* verde para texto sobre claro (contraste) */
+  --green-soft: #E4FAF1;   /* tinte verde */
   --white:      #FFFFFF;
+  --bg:         #F9F9F9;   /* fondo app */
 
-  /* Roles semánticos (contraste AA sobre blanco) */
-  --ink:      #12273D;   /* texto principal */
-  --muted:    #4F6474;   /* texto secundario */
-  --line:     #D3DEE7;   /* bordes */
-  --surface:  #F4F8FB;   /* superficie alterna */
-  --focus:    #4FA6CE;   /* foco accesible */
+  /* Texto y superficies */
+  --ink:      #1C2024;   /* texto principal */
+  --muted:    #667085;   /* texto secundario */
+  --line:     #E6E8EB;   /* bordes */
+  --surface:  #F4F6F8;   /* superficie alterna */
+  --focus:    #0069FF;
+
+  /* Colores de estado (tags) */
+  --st-default:   #6B7280;  --st-default-bg:   #F1F2F4;
+  --st-processing:#4F5BD5;  --st-processing-bg:#ECEEFF;
+  --st-success:   #00A56A;  --st-success-bg:   #E4FAF1;
+  --st-warning:   #C77700;  --st-warning-bg:   #FDF1DF;
+  --st-error:     #E5484D;  --st-error-bg:     #FDECEC;
+
+  /* Radios (look redondeado/actual) */
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 18px;
+  --r-pill: 999px;
+
+  /* Tipografía */
+  --font-display: "Montserrat", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Roboto", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -19,15 +39,33 @@
 html, body, #root { height: 100%; }
 
 body {
-  font-family: "Open Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-body);
   color: var(--ink);
-  background: var(--white);
+  background: var(--bg);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
+
+h1, h2, h3, .display { font-family: var(--font-display); }
 
 /* Evita zoom raro en inputs de iOS (fuente >= 16px) */
 input, select, button, textarea { font-family: inherit; }
 input, select { font-size: 16px; }
 
 button { cursor: pointer; }
+
+/* Iconos Material Symbols (Rounded) */
+.mi {
+  font-family: "Material Symbols Rounded";
+  font-weight: normal;
+  font-style: normal;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  direction: ltr;
+  font-variation-settings: "FILL" 1, "wght" 500, "GRAD" 0, "opsz" 24;
+  -webkit-font-feature-settings: "liga";
+  font-feature-settings: "liga";
+}
