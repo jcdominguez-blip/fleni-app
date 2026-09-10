@@ -1,11 +1,14 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { DATOS, SCALES, SCALE_KEYS } from "./scales.js";
-import { compartirExcel, descargarExcel, importarExcel } from "./exportar.js";
+import { compartirExcel, descargarExcel, importarExcel, mergeRegistros, maxEscala } from "./exportar.js";
 import Splash from "./Splash.jsx";
+import ProgresoPanel from "./ProgresoPanel.jsx";
 import "./App.css";
 
 const sum = (arr) => arr.reduce((a, b) => a + (typeof b === "number" ? b : 0), 0);
 const cnt = (arr) => arr.filter((x) => typeof x === "number").length;
+const hoyISO = () => new Date().toISOString().slice(0, 10);
+const datosVacios = () => Object.fromEntries(DATOS.map((d) => [d[0], ""]));
 
 // Icono Material Symbols (Rounded)
 const Mi = ({ name, className = "" }) => <span className={"mi " + className} aria-hidden="true">{name}</span>;
@@ -27,8 +30,7 @@ function estadoEscala(hechos, total) {
   return { variant: "success", icon: "check_circle", label: "Completa" };
 }
 
-const STORAGE_KEY = "fleni-eval-progreso-v1";
-const vacio = { datos: null, covs: null, bbs: null, fga: null };
+const STORAGE_KEY = "fleni-eval-progreso-v2";
 
 // Normaliza un array guardado a la longitud esperada de la escala.
 const normArr = (a, len) => {
@@ -54,12 +56,13 @@ export default function App() {
   const fileRef = useRef(null);
 
   const [tab, setTab] = useState("paciente");
-  const [datos, setDatos] = useState(() =>
-    guardado?.datos ?? Object.fromEntries(DATOS.map((d) => [d[0], ""]))
-  );
+  const [datos, setDatos] = useState(() => guardado?.datos ?? datosVacios());
   const [covs, setCovs] = useState(() => normArr(guardado?.covs, SCALES.covs.labels.length));
   const [bbs, setBbs] = useState(() => normArr(guardado?.bbs, SCALES.bbs.labels.length));
   const [fga, setFga] = useState(() => normArr(guardado?.fga, SCALES.fga.labels.length));
+  // historial: evaluaciones anteriores (para comparar el progreso entre fechas)
+  const [historial, setHistorial] = useState(() => (Array.isArray(guardado?.historial) ? guardado.historial : []));
+  const [ultimaImportada, setUltimaImportada] = useState(null);
 
   const [restaurado, setRestaurado] = useState(!!guardado);
   const [aviso, setAviso] = useState("");
@@ -72,14 +75,20 @@ export default function App() {
     [covs, bbs, fga] // eslint-disable-line react-hooks/exhaustive-deps
   );
 
+  // Registros comparables: historial + evaluación actual (unidos por fecha)
+  const registros = useMemo(
+    () => mergeRegistros(historial, { datos, covs, bbs, fga, totals }),
+    [historial, datos, covs, bbs, fga, totals]
+  );
+
   // Autoguardado: guarda el progreso en este dispositivo ante cada cambio.
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ datos, covs, bbs, fga }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ datos, covs, bbs, fga, historial }));
     } catch {
       /* almacenamiento no disponible */
     }
-  }, [datos, covs, bbs, fga]);
+  }, [datos, covs, bbs, fga, historial]);
 
   const setItem = (key, i, v) => {
     const n = [...state[key]];
@@ -90,36 +99,59 @@ export default function App() {
   const filled = cnt(covs) + cnt(bbs) + cnt(fga);
   const totalItems = SCALE_KEYS.reduce((a, k) => a + SCALES[k].labels.length, 0);
 
-  const onCompartir = () => compartirExcel(datos, state, totals);
-  const onDescargar = () => descargarExcel(datos, state, totals);
+  const onCompartir = () => compartirExcel(datos, state, totals, historial);
+  const onDescargar = () => descargarExcel(datos, state, totals, historial);
 
   const abrirImport = () => fileRef.current?.click();
+
+  const aplicarRegistro = (r) => {
+    setDatos({ ...datosVacios(), ...r.datos });
+    setCovs(normArr(r.covs, SCALES.covs.labels.length));
+    setBbs(normArr(r.bbs, SCALES.bbs.labels.length));
+    setFga(normArr(r.fga, SCALES.fga.labels.length));
+  };
 
   const onImportar = async (e) => {
     const file = e.target.files?.[0];
     e.target.value = ""; // permite re-subir el mismo archivo
     if (!file) return;
     try {
-      const p = await importarExcel(file);
-      setDatos(p.datos);
-      setCovs(p.covs);
-      setBbs(p.bbs);
-      setFga(p.fga);
+      const { registros: regs } = await importarExcel(file);
+      const ultima = regs[regs.length - 1];
+      // Todas las evaluaciones del archivo pasan al historial; se prepara una
+      // NUEVA medición (datos del paciente heredados, puntajes en blanco, fecha hoy).
+      setHistorial(regs);
+      setDatos({ ...datosVacios(), ...ultima.datos, fechaEval: hoyISO() });
+      setCovs(Array(SCALES.covs.labels.length).fill(""));
+      setBbs(Array(SCALES.bbs.labels.length).fill(""));
+      setFga(Array(SCALES.fga.labels.length).fill(""));
+      setUltimaImportada(ultima);
       setRestaurado(false);
-      const done = SCALE_KEYS.filter((k) => cnt(p[k]) === SCALES[k].labels.length);
+      const fechas = regs.map((r) => r.datos.fechaEval || "s/f").join(", ");
       setAviso(
-        `Planilla importada${done.length ? ` · ya completas: ${done.map((k) => SCALES[k].name).join(", ")}` : ""}. Continuá donde quedó.`
+        `Importé ${regs.length} evaluación(es) al historial (${fechas}). Cargá la nueva medición: al exportar vas a ver la comparación en la pestaña Progreso y en el Excel.`
       );
     } catch (err) {
       setAviso(err?.message || "No se pudo leer el archivo. Subí un .xlsx exportado por la app.");
     }
   };
 
+  // Caso "turnos": en vez de una nueva medición, continuar la última evaluación importada.
+  const continuarUltima = () => {
+    if (!ultimaImportada) return;
+    aplicarRegistro(ultimaImportada);
+    setHistorial((h) => h.filter((r) => r !== ultimaImportada));
+    setUltimaImportada(null);
+    setAviso("Seguís editando la última evaluación importada.");
+  };
+
   const empezarDeCero = () => {
-    setDatos(Object.fromEntries(DATOS.map((d) => [d[0], ""])));
+    setDatos(datosVacios());
     setCovs(Array(SCALES.covs.labels.length).fill(""));
     setBbs(Array(SCALES.bbs.labels.length).fill(""));
     setFga(Array(SCALES.fga.labels.length).fill(""));
+    setHistorial([]);
+    setUltimaImportada(null);
     setRestaurado(false);
     setAviso("");
     try {
@@ -161,22 +193,29 @@ export default function App() {
           {aviso && (
             <div className="aviso">
               <span>{aviso}</span>
-              <button onClick={() => setAviso("")}><Mi name="close" className="sm" />OK</button>
+              <div className="aviso-acc">
+                {ultimaImportada && (
+                  <button onClick={continuarUltima}><Mi name="edit" className="sm" />Continuar la última</button>
+                )}
+                <button onClick={() => setAviso("")}><Mi name="close" className="sm" />OK</button>
+              </div>
             </div>
           )}
         </div>
       )}
 
       <nav className="tabs">
-        {[["paciente", "Paciente"], ["covs", "COVS"], ["bbs", "Berg"], ["fga", "FGA"], ["resumen", "Resumen"]].map(
+        {[["paciente", "Paciente"], ["covs", "COVS"], ["bbs", "Berg"], ["fga", "FGA"], ["resumen", "Resumen"], ["progreso", "Progreso"]].map(
           ([k, l]) => (
             <button
               key={k}
               className={"tab" + (tab === k ? " on" : "") + (completa[k] ? " done" : "")}
               onClick={() => setTab(k)}
             >
+              {k === "progreso" && <Mi name="trending_up" className="sm" />}
               {l}
               {SCALE_KEYS.includes(k) && <b>{completa[k] ? "✓" : totals[k]}</b>}
+              {k === "progreso" && historial.length > 0 && <b>{registros.length}</b>}
             </button>
           )
         )}
@@ -253,6 +292,10 @@ export default function App() {
               reales de pacientes.
             </p>
           </div>
+        )}
+
+        {tab === "progreso" && (
+          <ProgresoPanel registros={registros} tieneHistorial={historial.length > 0} onImportar={abrirImport} />
         )}
       </main>
     </div>

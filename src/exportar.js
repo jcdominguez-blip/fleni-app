@@ -18,22 +18,42 @@ const fill = (argb) => ({ type: "pattern", pattern: "solid", fgColor: { argb } }
 const thin = { style: "thin", color: { argb: C.line } };
 const borderAll = { top: thin, left: thin, bottom: thin, right: thin };
 
-const maxEscala = (key) => SCALES[key].labels.length * SCALES[key].max;
+// Colores para series por fecha (hasta 6, luego cicla)
+const SERIE = ["#0069FF", "#00A56A", "#C77700", "#7A5AF8", "#E5484D", "#0BA5C1"];
+
+export const maxEscala = (key) => SCALES[key].labels.length * SCALES[key].max;
+const totalsDe = (rec) =>
+  Object.fromEntries(SCALE_KEYS.map((k) => [k, (rec[k] || []).reduce((a, b) => a + (typeof b === "number" ? b : 0), 0)]));
+const fechaDe = (rec) => (rec?.datos?.fechaEval || "").trim();
+
+// Une historial + evaluación actual: reemplaza si comparten fecha, si no agrega.
+// Devuelve la lista ordenada por fecha (las sin fecha, al final).
+export function mergeRegistros(historial, actual) {
+  const out = [...(historial || [])];
+  const fa = fechaDe(actual);
+  const idx = out.findIndex((r) => fechaDe(r) && fechaDe(r) === fa);
+  if (idx >= 0) out[idx] = actual;
+  else out.push(actual);
+  return out.sort((a, b) => {
+    const x = fechaDe(a), y = fechaDe(b);
+    if (!x) return 1;
+    if (!y) return -1;
+    return x.localeCompare(y);
+  });
+}
 
 // ───────────────────────────────────────────────────────────────────────────
 // Construye el .xlsx con estilos (ExcelJS). Devuelve un ArrayBuffer.
-//  - "Evaluación": legible y con formato, como la planilla
-//  - "Registro": una fila estructurada (fuente de verdad para reimportar)
-//  - "Gráfico": imagen de barras Puntaje vs Máximo por escala
-export async function construirWorkbookBuffer(datos, state, totals) {
+export async function construirWorkbookBuffer(datos, state, totals, historial = []) {
   const wb = new ExcelJS.Workbook();
   wb.creator = "Fleni App";
   wb.created = new Date();
 
-  // ── Hoja Evaluación ───────────────────────────────────────────────
-  const ws = wb.addWorksheet("Evaluación", {
-    views: [{ showGridLines: false }],
-  });
+  const actual = { datos, covs: state.covs, bbs: state.bbs, fga: state.fga, totals };
+  const registros = mergeRegistros(historial, actual);
+
+  // ── Hoja Evaluación (la evaluación actual) ────────────────────────
+  const ws = wb.addWorksheet("Evaluación", { views: [{ showGridLines: false }] });
   ws.columns = [{ width: 46 }, { width: 16 }, { width: 16 }];
 
   const titulo = ws.addRow(["Evaluación kinésica — FLENI"]);
@@ -43,7 +63,7 @@ export async function construirWorkbookBuffer(datos, state, totals) {
   titulo.getCell(1).fill = fill(C.blue);
   titulo.getCell(1).alignment = { vertical: "middle", horizontal: "left", indent: 1 };
 
-  const sub = ws.addRow(["Kinesiología · Prototipo de evaluación digital"]);
+  const sub = ws.addRow([`Kinesiología · Prototipo · Fecha: ${datos.fechaEval || "—"}`]);
   ws.mergeCells(sub.number, 1, sub.number, 3);
   sub.getCell(1).font = { name: "Arial", size: 10, italic: true, color: { argb: C.muted } };
   sub.getCell(1).alignment = { indent: 1 };
@@ -56,7 +76,6 @@ export async function construirWorkbookBuffer(datos, state, totals) {
     r.getCell(1).fill = fill(argbFill);
     r.getCell(1).alignment = { vertical: "middle", indent: 1 };
     r.height = 20;
-    return r;
   };
 
   seccion("DATOS DEL PACIENTE", C.ink, C.surface);
@@ -76,7 +95,6 @@ export async function construirWorkbookBuffer(datos, state, totals) {
     head.getCell(1).font = { name: "Arial", bold: true, size: 9, color: { argb: C.muted } };
     head.getCell(2).font = { name: "Arial", bold: true, size: 9, color: { argb: C.muted } };
     head.getCell(2).alignment = { horizontal: "center" };
-
     s.labels.forEach((l, i) => {
       const r = ws.addRow([`${i + 1}. ${l}`, state[key][i]]);
       r.getCell(1).font = { name: "Arial", size: 10, color: { argb: C.ink } };
@@ -84,12 +102,8 @@ export async function construirWorkbookBuffer(datos, state, totals) {
       r.getCell(2).alignment = { horizontal: "center" };
       r.getCell(1).border = borderAll;
       r.getCell(2).border = borderAll;
-      if (i % 2 === 1) {
-        r.getCell(1).fill = fill(C.surface);
-        r.getCell(2).fill = fill(C.surface);
-      }
+      if (i % 2 === 1) { r.getCell(1).fill = fill(C.surface); r.getCell(2).fill = fill(C.surface); }
     });
-
     const tot = ws.addRow([`TOTAL ${s.name.toUpperCase()}`, totals[key]]);
     tot.getCell(1).font = { name: "Arial", bold: true, size: 10, color: { argb: C.blue } };
     tot.getCell(2).font = { name: "Arial", bold: true, size: 12, color: { argb: C.blue } };
@@ -99,7 +113,7 @@ export async function construirWorkbookBuffer(datos, state, totals) {
     ws.addRow([]);
   });
 
-  // ── Hoja Registro (estructurada, para reimportar) ─────────────────
+  // ── Hoja Registro (una fila por evaluación/fecha; fuente para reimportar) ──
   const wr = wb.addWorksheet("Registro");
   const headers = [
     ...DATOS.map((d) => d[0]),
@@ -107,105 +121,98 @@ export async function construirWorkbookBuffer(datos, state, totals) {
     ...BBS.map((_, i) => `bbs_${i + 1}`), "total_bbs",
     ...FGA.map((_, i) => `fga_${i + 1}`), "total_fga",
   ];
-  const row = [
-    ...DATOS.map((d) => datos[d[0]]),
-    ...state.covs, totals.covs,
-    ...state.bbs, totals.bbs,
-    ...state.fga, totals.fga,
-  ];
   const hr = wr.addRow(headers);
   hr.font = { name: "Arial", bold: true, size: 9, color: { argb: C.white } };
   hr.eachCell((cell) => { cell.fill = fill(C.blue); });
-  wr.addRow(row);
+  registros.forEach((r) => {
+    const t = r.totals || totalsDe(r);
+    wr.addRow([
+      ...DATOS.map((d) => r.datos[d[0]]),
+      ...r.covs, t.covs,
+      ...r.bbs, t.bbs,
+      ...r.fga, t.fga,
+    ]);
+  });
   wr.columns.forEach((col) => { col.width = 12; });
 
-  // ── Hoja Gráfico (imagen embebida) ────────────────────────────────
-  const png = dibujarGraficoPNG(totals);
+  // ── Hoja Gráfico (comparativa por fecha) ──────────────────────────
+  const png = dibujarComparativaPNG(registros);
   if (png) {
     const wg = wb.addWorksheet("Gráfico", { views: [{ showGridLines: false }] });
-    const t = wg.addRow(["Puntaje por escala"]);
+    const t = wg.addRow([registros.length > 1 ? "Progreso por escala (comparativa)" : "Puntaje por escala"]);
     t.getCell(1).font = { name: "Arial", bold: true, size: 14, color: { argb: C.ink } };
     const imgId = wb.addImage({ base64: png, extension: "png" });
-    // Ancla la imagen desde la fila 3 (col A)
-    wg.addImage(imgId, { tl: { col: 0.2, row: 2.2 }, ext: { width: 720, height: 380 } });
+    wg.addImage(imgId, { tl: { col: 0.2, row: 2.2 }, ext: { width: 760, height: 400 } });
   }
 
   return wb.xlsx.writeBuffer();
 }
 
-// Dibuja un gráfico de barras (Puntaje vs Máximo por escala) y devuelve PNG base64.
-// Devuelve null si no hay canvas disponible (ej. entorno Node en tests).
-function dibujarGraficoPNG(totals) {
+// Dibuja barras agrupadas por escala, una barra por fecha (altura = % del máximo).
+function dibujarComparativaPNG(registros) {
   if (typeof document === "undefined") return null;
-  const W = 720, H = 380, s = 2; // s: supersampling para nitidez
+  const W = 760, H = 400, s = 2;
   const cv = document.createElement("canvas");
   cv.width = W * s; cv.height = H * s;
   const ctx = cv.getContext("2d");
   if (!ctx) return null;
   ctx.scale(s, s);
-  ctx.fillStyle = "#FFFFFF";
-  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = "#FFFFFF"; ctx.fillRect(0, 0, W, H);
 
-  const pad = { l: 48, r: 20, t: 24, b: 54 };
-  const plotW = W - pad.l - pad.r;
-  const plotH = H - pad.t - pad.b;
-  const datos = SCALE_KEYS.map((k) => ({
-    name: SCALES[k].name,
-    val: totals[k] || 0,
-    max: SCALES[k].labels.length * SCALES[k].max,
-  }));
-  const yMax = Math.max(...datos.map((d) => d.max), 1);
+  const pad = { l: 44, r: 20, t: 20, b: 64 };
+  const plotW = W - pad.l - pad.r, plotH = H - pad.t - pad.b;
+  const fechas = registros.map((r) => (r.datos.fechaEval || "s/f"));
 
-  // Eje Y (0, mitad, max) + grilla
-  ctx.strokeStyle = "#E6E8EB";
-  ctx.fillStyle = "#667085";
-  ctx.font = "11px Arial";
-  ctx.textAlign = "right";
-  ctx.textBaseline = "middle";
+  // Grilla + eje % (0/50/100)
+  ctx.strokeStyle = "#E6E8EB"; ctx.fillStyle = "#667085";
+  ctx.font = "11px Arial"; ctx.textAlign = "right"; ctx.textBaseline = "middle";
   [0, 0.5, 1].forEach((f) => {
     const y = pad.t + plotH - plotH * f;
     ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(pad.l + plotW, y); ctx.stroke();
-    ctx.fillText(String(Math.round(yMax * f)), pad.l - 8, y);
+    ctx.fillText(f === 0 ? "0" : `${f * 100}%`, pad.l - 8, y);
   });
 
-  // Barras agrupadas: obtenido (azul) + máximo (celeste claro)
-  const groupW = plotW / datos.length;
-  const barW = Math.min(46, groupW * 0.28);
-  datos.forEach((d, i) => {
-    const cx = pad.l + groupW * i + groupW / 2;
-    const hVal = plotH * (d.val / yMax);
-    const hMax = plotH * (d.max / yMax);
-    // máximo (fondo)
-    ctx.fillStyle = "#E6F0FF";
-    ctx.fillRect(cx - barW - 3, pad.t + plotH - hMax, barW, hMax);
-    // obtenido
-    ctx.fillStyle = "#0069FF";
-    ctx.fillRect(cx + 3, pad.t + plotH - hVal, barW, hVal);
-    // valor arriba del obtenido
-    ctx.fillStyle = "#1C2024";
-    ctx.font = "bold 12px Arial";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "bottom";
-    ctx.fillText(String(d.val), cx + 3 + barW / 2, pad.t + plotH - hVal - 3);
-    // etiqueta de escala
-    ctx.fillStyle = "#667085";
-    ctx.font = "12px Arial";
-    ctx.textBaseline = "top";
-    ctx.fillText(d.name, cx, pad.t + plotH + 8);
+  const groupW = plotW / SCALE_KEYS.length;
+  const n = registros.length;
+  const barW = Math.min(40, (groupW * 0.7) / n);
+  const innerGap = 4;
+  const clusterW = n * barW + (n - 1) * innerGap;
+
+  SCALE_KEYS.forEach((k, gi) => {
+    const gx = pad.l + groupW * gi + groupW / 2;
+    const max = maxEscala(k);
+    registros.forEach((r, ri) => {
+      const t = (r.totals || totalsDe(r))[k] || 0;
+      const h = plotH * Math.max(0, Math.min(1, t / max));
+      const x = gx - clusterW / 2 + ri * (barW + innerGap);
+      ctx.fillStyle = SERIE[ri % SERIE.length];
+      ctx.fillRect(x, pad.t + plotH - h, barW, h);
+      ctx.fillStyle = "#1C2024"; ctx.font = "bold 11px Arial";
+      ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+      ctx.fillText(String(t), x + barW / 2, pad.t + plotH - h - 2);
+    });
+    ctx.fillStyle = "#667085"; ctx.font = "12px Arial";
+    ctx.textAlign = "center"; ctx.textBaseline = "top";
+    ctx.fillText(SCALES[k].name, gx, pad.t + plotH + 8);
   });
 
-  // Leyenda
+  // Leyenda de fechas
   ctx.textAlign = "left"; ctx.textBaseline = "middle"; ctx.font = "11px Arial";
-  ctx.fillStyle = "#0069FF"; ctx.fillRect(pad.l, H - 20, 12, 12);
-  ctx.fillStyle = "#667085"; ctx.fillText("Puntaje obtenido", pad.l + 18, H - 14);
-  ctx.fillStyle = "#E6F0FF"; ctx.fillRect(pad.l + 150, H - 20, 12, 12);
-  ctx.fillStyle = "#667085"; ctx.fillText("Máximo posible", pad.l + 168, H - 14);
+  let lx = pad.l;
+  const ly = H - 20;
+  fechas.forEach((f, i) => {
+    ctx.fillStyle = SERIE[i % SERIE.length]; ctx.fillRect(lx, ly - 6, 12, 12);
+    ctx.fillStyle = "#667085"; ctx.fillText(f, lx + 18, ly);
+    lx += 18 + ctx.measureText(f).width + 22;
+  });
+  ctx.fillStyle = "#9AA4B2"; ctx.font = "italic 10px Arial"; ctx.textAlign = "right";
+  ctx.fillText("altura = % del máximo de cada escala", W - pad.r, ly);
 
   return cv.toDataURL("image/png").split(",")[1];
 }
 
-// Lee un .xlsx exportado por la app (hoja "Registro") y reconstruye el estado
-// para continuar una evaluación cargada parcialmente en otro turno/dispositivo.
+// Lee un .xlsx exportado por la app (hoja "Registro") y devuelve TODAS las
+// evaluaciones (una por fila) como registros {datos, covs, bbs, fga, totals}.
 export async function importarExcel(file) {
   const buf = await file.arrayBuffer();
   const wb = XLSX.read(buf, { type: "array" });
@@ -214,27 +221,29 @@ export async function importarExcel(file) {
     throw new Error("El archivo no tiene la hoja 'Registro'. Subí un .xlsx exportado por la app.");
   }
   const filas = XLSX.utils.sheet_to_json(ws, { defval: "" });
-  const rec = filas[0];
-  if (!rec) throw new Error("La hoja 'Registro' está vacía.");
+  if (!filas.length) throw new Error("La hoja 'Registro' está vacía.");
 
-  const datos = Object.fromEntries(
-    DATOS.map(([k]) => [k, rec[k] != null && rec[k] !== "" ? String(rec[k]) : ""])
-  );
-
-  const leerEscala = (key, labels) =>
+  const leerEscala = (rec, key, labels) =>
     labels.map((_, i) => {
       const v = rec[`${key}_${i + 1}`];
       if (v === "" || v == null) return "";
-      const n = Number(v);
-      return Number.isFinite(n) ? n : "";
+      const nn = Number(v);
+      return Number.isFinite(nn) ? nn : "";
     });
 
-  return {
-    datos,
-    covs: leerEscala("covs", COVS),
-    bbs: leerEscala("bbs", BBS),
-    fga: leerEscala("fga", FGA),
-  };
+  const registros = filas.map((rec) => {
+    const datos = Object.fromEntries(
+      DATOS.map(([k]) => [k, rec[k] != null && rec[k] !== "" ? String(rec[k]) : ""])
+    );
+    const covs = leerEscala(rec, "covs", COVS);
+    const bbs = leerEscala(rec, "bbs", BBS);
+    const fga = leerEscala(rec, "fga", FGA);
+    const r = { datos, covs, bbs, fga };
+    r.totals = totalsDe(r);
+    return r;
+  });
+
+  return { registros };
 }
 
 export function nombreArchivo(datos) {
@@ -243,16 +252,15 @@ export function nombreArchivo(datos) {
   return `evaluacion_${base}_${fecha}.xlsx`;
 }
 
-async function generarBlob(datos, state, totals) {
-  const buffer = await construirWorkbookBuffer(datos, state, totals);
+async function generarBlob(datos, state, totals, historial) {
+  const buffer = await construirWorkbookBuffer(datos, state, totals, historial);
   return new Blob([buffer], {
     type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   });
 }
 
-// Descarga clásica (desktop y fallback en mobile)
-export async function descargarExcel(datos, state, totals) {
-  const blob = await generarBlob(datos, state, totals);
+export async function descargarExcel(datos, state, totals, historial = []) {
+  const blob = await generarBlob(datos, state, totals, historial);
   const nombre = nombreArchivo(datos);
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -264,25 +272,18 @@ export async function descargarExcel(datos, state, totals) {
   setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 
-// Compartir nativo en el celular (WhatsApp / Mail / Drive) vía Web Share API.
-// Devuelve true si logró compartir; si no está soportado, cae a descarga.
-export async function compartirExcel(datos, state, totals) {
-  const blob = await generarBlob(datos, state, totals);
+export async function compartirExcel(datos, state, totals, historial = []) {
+  const blob = await generarBlob(datos, state, totals, historial);
   const nombre = nombreArchivo(datos);
   const file = new File([blob], nombre, { type: blob.type });
-
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
     try {
-      await navigator.share({
-        files: [file],
-        title: "Evaluación kinésica",
-        text: `Evaluación — ${datos.apellidoNombre || "paciente"}`,
-      });
+      await navigator.share({ files: [file], title: "Evaluación kinésica", text: `Evaluación — ${datos.apellidoNombre || "paciente"}` });
       return true;
     } catch (err) {
       if (err && err.name === "AbortError") return false;
     }
   }
-  await descargarExcel(datos, state, totals);
+  await descargarExcel(datos, state, totals, historial);
   return false;
 }

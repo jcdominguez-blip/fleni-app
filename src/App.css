@@ -26,6 +26,7 @@
 /* Avisos */
 .avisos { display: flex; flex-direction: column; gap: 8px; padding: 12px 18px 0; }
 .aviso { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; line-height: 1.4; background: var(--blue-soft); color: var(--ink); border: 1px solid var(--line); border-left: 3px solid var(--blue); border-radius: var(--r-md); padding: 11px 13px; }
+.aviso-acc { display: flex; gap: 6px; flex: 0 0 auto; flex-wrap: wrap; }
 .aviso button { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; color: var(--blue); background: var(--white); border: 1px solid var(--line); border-radius: var(--r-pill); padding: 6px 12px; }
 
 /* Tabs como chips */
@@ -96,6 +97,26 @@
 .btn.accent { background: var(--green); color: #04351f; }
 .btn.ghost { background: transparent; color: var(--blue); border-color: var(--blue); }
 .btn.ghost-light { background: rgba(255,255,255,.1); color: var(--white); border-color: rgba(255,255,255,.4); }
+
+/* Progreso (comparativa entre fechas) */
+.prog { display: flex; flex-direction: column; gap: 14px; }
+.prog-intro { font-size: 13px; color: var(--muted); line-height: 1.5; }
+.prog-empty { text-align: center; padding: 24px 8px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.prog-empty .mi { font-size: 40px; color: var(--blue); }
+.prog-empty h3 { font-family: var(--font-display); font-size: 17px; font-weight: 800; color: var(--ink); }
+.prog-empty p { font-size: 13px; color: var(--muted); line-height: 1.55; max-width: 420px; }
+.prog-empty .btn { margin-top: 8px; }
+.prog-card { border: 1px solid var(--line); border-radius: var(--r-md); padding: 14px 16px; background: var(--surface); }
+.prog-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.prog-name { font-family: var(--font-display); font-weight: 800; font-size: 14px; color: var(--ink); }
+.prog-max { margin-left: auto; font-size: 11px; color: var(--muted); }
+.prog-bars { display: flex; flex-direction: column; gap: 8px; }
+.prog-row { display: flex; align-items: center; gap: 10px; }
+.prog-fecha { flex: 0 0 84px; font-size: 11px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+.prog-track { flex: 1; height: 16px; background: var(--white); border: 1px solid var(--line); border-radius: var(--r-pill); overflow: hidden; }
+.prog-fill { display: block; height: 100%; background: var(--blue); border-radius: var(--r-pill); transition: width .3s ease; }
+.prog-fill.last { background: var(--green); }
+.prog-val { flex: 0 0 34px; text-align: right; font-family: var(--font-display); font-weight: 800; font-size: 14px; color: var(--ink); font-variant-numeric: tabular-nums; }
 
 /* CTA al pie de cada escala */
 .scalefoot { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
