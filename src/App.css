@@ -9,8 +9,17 @@
 
 /* Barra superior */
 .bar { display: flex; align-items: center; gap: 16px; padding: 14px 18px; background: var(--blue); color: var(--white); position: sticky; top: 0; z-index: 5; }
-.brand { font-family: var(--font-display); font-weight: 800; font-size: 18px; letter-spacing: -.01em; }
-.brand span { color: var(--green); }
+/* Logotipo del navbar: colapsa al símbolo al hacer scroll (crossfade fluido) */
+.brandwrap { position: relative; flex: 0 0 auto; height: 30px; width: 132px; overflow: hidden; transition: width .42s cubic-bezier(.22, .61, .36, 1); }
+.brandwrap.min { width: 32px; }
+.brandwrap img { position: absolute; left: 0; top: 0; height: 100%; width: auto; }
+.logo-full { transition: opacity .32s ease, transform .42s cubic-bezier(.22, .61, .36, 1); transform-origin: left center; }
+.logo-sym { opacity: 0; filter: brightness(0) invert(1); transition: opacity .32s ease .06s, transform .42s ease; transform: scale(.9); transform-origin: left center; }
+.brandwrap.min .logo-full { opacity: 0; transform: translateX(-4px); }
+.brandwrap.min .logo-sym { opacity: 1; transform: scale(1); }
+@media (prefers-reduced-motion: reduce) {
+  .brandwrap, .logo-full, .logo-sym { transition-duration: .01ms; }
+}
 .bar .titles { border-left: 1px solid rgba(255,255,255,.28); padding-left: 16px; }
 .bar .eyebrow { color: rgba(255,255,255,.78); font-size: 9px; }
 .bar h1 { font-family: var(--font-display); font-size: 15px; font-weight: 700; margin-top: 2px; }

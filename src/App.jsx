@@ -3,6 +3,8 @@ import { DATOS, MEDICION, SCALES, SCALE_KEYS } from "./scales.js";
 import { compartirExcel, descargarExcel, importarExcel, mergeRegistros } from "./exportar.js";
 import Splash from "./Splash.jsx";
 import ProgresoPanel from "./ProgresoPanel.jsx";
+import logoFull from "../img/logo_fleniapp.svg";
+import simbolo from "../img/favicon.svg";
 import "./App.css";
 
 const sum = (arr) => arr.reduce((a, b) => a + (typeof b === "number" ? b : 0), 0);
@@ -84,6 +86,14 @@ export default function App() {
 
   const [restaurado, setRestaurado] = useState(!!guardado);
   const [aviso, setAviso] = useState("");
+  // Navbar: el logotipo se colapsa al símbolo al hacer scroll
+  const [miniLogo, setMiniLogo] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setMiniLogo(window.scrollY > 20);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   const totals = useMemo(
     () => Object.fromEntries(SCALE_KEYS.map((k) => [k, sum(escalas[k])])),
@@ -178,7 +188,10 @@ export default function App() {
     <div className="app">
       <Splash />
       <header className="bar">
-        <div className="brand">Fleni<span> App</span></div>
+        <div className={"brandwrap" + (miniLogo ? " min" : "")} aria-label="Fleni App" title="Fleni App">
+          <img className="logo-full" src={logoFull} alt="Fleni App" />
+          <img className="logo-sym" src={simbolo} alt="" />
+        </div>
         <div className="titles">
           <div className="eyebrow">FLENI · Kinesiología — prototipo</div>
           <h1>Evaluación kinésica digital</h1>
