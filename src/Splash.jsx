@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import logo from "../img/logo.svg";
+import logo from "../img/logo_fleniapp.svg";
 import "./Splash.css";
 
 // Pantalla de inicio: revela el logo (blanco) sobre el navy institucional
