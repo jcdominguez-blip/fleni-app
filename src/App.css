@@ -107,6 +107,22 @@
 .btn.ghost { background: transparent; color: var(--blue); border-color: var(--blue); }
 .btn.ghost-light { background: rgba(255,255,255,.1); color: var(--white); border-color: rgba(255,255,255,.4); }
 
+/* Modal de bienvenida (fondo con blur) */
+.welcome { position: fixed; inset: 0; z-index: 90; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(16, 26, 48, .45); backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px); animation: welcomeBg .3s ease both; }
+.welcome-card { width: 100%; max-width: 420px; background: var(--white); border-radius: var(--r-lg); padding: 26px 24px; text-align: center; box-shadow: 0 24px 60px rgba(16, 26, 48, .28); animation: welcomeCard .42s cubic-bezier(.22, .61, .36, 1) both; }
+.welcome-icon { width: 56px; height: 56px; margin: 0 auto 14px; border-radius: 50%; background: var(--blue-soft); color: var(--blue); display: flex; align-items: center; justify-content: center; }
+.welcome-icon .mi { font-size: 30px; }
+.welcome-card h2 { font-family: var(--font-display); font-size: 20px; font-weight: 800; color: var(--ink); }
+.welcome-sub { font-size: 13px; color: var(--muted); margin-top: 6px; }
+.welcome-actions { display: flex; flex-direction: column; gap: 10px; margin: 20px 0 14px; }
+.welcome-actions .btn { width: 100%; padding: 14px 18px; }
+.welcome-hint { font-size: 12px; color: var(--muted); line-height: 1.6; text-align: left; background: var(--surface); border-radius: var(--r-md); padding: 12px 14px; }
+@keyframes welcomeBg { from { opacity: 0; } to { opacity: 1; } }
+@keyframes welcomeCard { from { opacity: 0; transform: translateY(14px) scale(.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .welcome, .welcome-card { animation-duration: .01ms; }
+}
+
 /* Progreso (comparativa entre fechas) */
 .prog { display: flex; flex-direction: column; gap: 14px; }
 .prog-intro { font-size: 13px; color: var(--muted); line-height: 1.5; }

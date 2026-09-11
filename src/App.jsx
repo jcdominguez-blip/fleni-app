@@ -3,6 +3,7 @@ import { DATOS, MEDICION, SCALES, SCALE_KEYS } from "./scales.js";
 import { compartirExcel, descargarExcel, importarExcel, mergeRegistros } from "./exportar.js";
 import Splash from "./Splash.jsx";
 import ProgresoPanel from "./ProgresoPanel.jsx";
+import Bienvenida from "./Bienvenida.jsx";
 import logoFull from "../img/logo_fleniapp.svg";
 import simbolo from "../img/favicon.svg";
 import "./App.css";
@@ -86,6 +87,8 @@ export default function App() {
 
   const [restaurado, setRestaurado] = useState(!!guardado);
   const [aviso, setAviso] = useState("");
+  // Modal de bienvenida: solo si no hay una evaluación en curso recuperada
+  const [bienvenida, setBienvenida] = useState(!guardado);
   // Navbar: el logotipo se colapsa al símbolo al hacer scroll
   const [miniLogo, setMiniLogo] = useState(false);
   useEffect(() => {
@@ -130,6 +133,10 @@ export default function App() {
   const onDescargar = () => descargarExcel(actual, historial);
   const abrirImport = () => fileRef.current?.click();
 
+  // Acciones del modal de bienvenida
+  const bienvenidaCargar = () => { setBienvenida(false); abrirImport(); };
+  const bienvenidaNueva = () => { setBienvenida(false); setTab("paciente"); };
+
   const aplicarRegistro = (r) => {
     setDatos({ ...datosVacios(), ...r.datos });
     setMedicion({ ...medicionVacia(), ...(r.medicion || {}) });
@@ -152,7 +159,7 @@ export default function App() {
       setRestaurado(false);
       const fechas = regs.map((r) => r.datos.fechaEval || "s/f").join(", ");
       setAviso(
-        `Importé ${regs.length} evaluación(es) al historial (${fechas}). Cargá la nueva medición: al exportar vas a ver la comparación en Progreso y en el Excel.`
+        `Cargué ${regs.length} evaluación(es) al historial (${fechas}). Completá la nueva medición: al exportar vas a ver la comparación en Progreso y en el Excel.`
       );
     } catch (err) {
       setAviso(err?.message || "No se pudo leer el archivo. Subí un .xlsx exportado por la app.");
@@ -187,6 +194,7 @@ export default function App() {
   return (
     <div className="app">
       <Splash />
+      {bienvenida && <Bienvenida onCargar={bienvenidaCargar} onNueva={bienvenidaNueva} />}
       <header className="bar">
         <div className={"brandwrap" + (miniLogo ? " min" : "")} aria-label="Fleni App" title="Fleni App">
           <img className="logo-full" src={logoFull} alt="Fleni App" />
@@ -196,9 +204,9 @@ export default function App() {
           <div className="eyebrow">FLENI · Kinesiología — prototipo</div>
           <h1>Evaluación kinésica digital</h1>
         </div>
-        <button className="barbtn" onClick={abrirImport} title="Continuar una planilla exportada">
+        <button className="barbtn" onClick={abrirImport} title="Cargar una planilla exportada del paciente">
           <Mi name="upload_file" className="sm" />
-          Importar
+          Cargar planilla
         </button>
         <input ref={fileRef} type="file" accept=".xlsx" hidden onChange={onImportar} />
       </header>
@@ -303,7 +311,7 @@ export default function App() {
               <div className="exportbtns">
                 <button className="btn solid" onClick={onCompartir}><Mi name="ios_share" />Compartir Excel</button>
                 <button className="btn ghost-light" onClick={onDescargar}><Mi name="download" />Descargar .xlsx</button>
-                <button className="btn ghost-light" onClick={abrirImport}><Mi name="upload_file" />Importar para continuar</button>
+                <button className="btn ghost-light" onClick={abrirImport}><Mi name="upload_file" />Cargar planilla del paciente</button>
               </div>
             </div>
 

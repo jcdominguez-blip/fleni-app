@@ -16,7 +16,7 @@ export default function ProgresoPanel({ registros, tieneHistorial, onImportar })
           Importá una planilla anterior del paciente (ej. la de un mes previo) y cargá la nueva medición.
           Acá vas a ver la evolución de cada escala entre fechas, y el Excel incluirá el gráfico comparativo.
         </p>
-        <button className="btn solid" onClick={onImportar}><Mi name="upload_file" />Importar evaluación anterior</button>
+        <button className="btn solid" onClick={onImportar}><Mi name="upload_file" />Cargar planilla anterior</button>
       </div>
     );
   }
