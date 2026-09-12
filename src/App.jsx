@@ -4,6 +4,7 @@ import { compartirExcel, descargarExcel, importarExcel, mergeRegistros } from ".
 import Splash from "./Splash.jsx";
 import ProgresoPanel from "./ProgresoPanel.jsx";
 import Bienvenida from "./Bienvenida.jsx";
+import Onboarding from "./Onboarding.jsx";
 import logoFull from "../img/logo_fleniapp.svg";
 import simbolo from "../img/favicon.svg";
 import "./App.css";
@@ -87,6 +88,14 @@ export default function App() {
 
   const [restaurado, setRestaurado] = useState(!!guardado);
   const [aviso, setAviso] = useState("");
+  // Onboarding: se muestra una sola vez por dispositivo
+  const [onboarding, setOnboarding] = useState(() => {
+    try { return !localStorage.getItem("fleni-onboarding-v1"); } catch { return true; }
+  });
+  const cerrarOnboarding = () => {
+    setOnboarding(false);
+    try { localStorage.setItem("fleni-onboarding-v1", "1"); } catch { /* noop */ }
+  };
   // Modal de bienvenida: solo si no hay una evaluación en curso recuperada
   const [bienvenida, setBienvenida] = useState(!guardado);
   // Navbar: el logotipo se colapsa al símbolo al hacer scroll
@@ -194,7 +203,8 @@ export default function App() {
   return (
     <div className="app">
       <Splash />
-      {bienvenida && <Bienvenida onCargar={bienvenidaCargar} onNueva={bienvenidaNueva} />}
+      {onboarding && <Onboarding onFinish={cerrarOnboarding} />}
+      {!onboarding && bienvenida && <Bienvenida onCargar={bienvenidaCargar} onNueva={bienvenidaNueva} />}
       <header className="bar">
         <div className={"brandwrap" + (miniLogo ? " min" : "")} aria-label="Fleni App" title="Fleni App">
           <img className="logo-full" src={logoFull} alt="Fleni App" />
