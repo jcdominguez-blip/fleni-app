@@ -11,6 +11,7 @@ const CLAVE = "Appfleni2026";
 export default function Login({ onSuccess }) {
   const [u, setU] = useState("");
   const [p, setP] = useState("");
+  const [verClave, setVerClave] = useState(false);
   const [error, setError] = useState(false);
   const [enviando, setEnviando] = useState(false);
 
@@ -38,23 +39,38 @@ export default function Login({ onSuccess }) {
         </p>
 
         <div className="login-fields">
-          <input
-            className={"login-input" + (error ? " err" : "")}
-            type="text"
-            placeholder="Usuario"
-            value={u}
-            autoComplete="username"
-            autoCapitalize="none"
-            onChange={(e) => { setU(e.target.value); setError(false); }}
-          />
-          <input
-            className={"login-input" + (error ? " err" : "")}
-            type="password"
-            placeholder="Contraseña"
-            value={p}
-            autoComplete="current-password"
-            onChange={(e) => { setP(e.target.value); setError(false); }}
-          />
+          <div className="login-field">
+            <Mi name="person" className="login-ic" />
+            <input
+              className={"login-input has-ic" + (error ? " err" : "")}
+              type="text"
+              placeholder="Usuario"
+              value={u}
+              autoComplete="username"
+              autoCapitalize="none"
+              onChange={(e) => { setU(e.target.value); setError(false); }}
+            />
+          </div>
+          <div className="login-field">
+            <Mi name="lock" className="login-ic" />
+            <input
+              className={"login-input has-ic has-tr" + (error ? " err" : "")}
+              type={verClave ? "text" : "password"}
+              placeholder="Contraseña"
+              value={p}
+              autoComplete="current-password"
+              onChange={(e) => { setP(e.target.value); setError(false); }}
+            />
+            <button
+              type="button"
+              className="login-eye"
+              onClick={() => setVerClave((v) => !v)}
+              aria-label={verClave ? "Ocultar contraseña" : "Mostrar contraseña"}
+              aria-pressed={verClave}
+            >
+              <Mi name={verClave ? "visibility_off" : "visibility"} />
+            </button>
+          </div>
         </div>
 
         {error && (
