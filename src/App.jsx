@@ -114,15 +114,6 @@ export default function App() {
 
   // Modal de bienvenida: solo si no hay una evaluación en curso recuperada
   const [bienvenida, setBienvenida] = useState(!guardado);
-  // Navbar: el logotipo se colapsa al símbolo al hacer scroll
-  const [miniLogo, setMiniLogo] = useState(false);
-  useEffect(() => {
-    const onScroll = () => setMiniLogo(window.scrollY > 20);
-    window.addEventListener("scroll", onScroll, { passive: true });
-    onScroll();
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
   const totals = useMemo(
     () => Object.fromEntries(SCALE_KEYS.map((k) => [k, sum(escalas[k])])),
     [escalas]
@@ -250,9 +241,8 @@ export default function App() {
         </div>
       )}
       <header className="bar">
-        <div className={"brandwrap" + (miniLogo ? " min" : "")} aria-label="Fleni App" title="Fleni App">
-          <img className="logo-full" src={logoFull} alt="Fleni App" />
-          <img className="logo-sym" src={simbolo} alt="" />
+        <div className="brandmark" aria-label="Fleni App" title="Fleni App">
+          <img src={simbolo} alt="Fleni App" />
         </div>
         <div className="titles">
           <div className="eyebrow">FLENI · Kinesiología — prototipo</div>
