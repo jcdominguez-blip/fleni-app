@@ -141,6 +141,52 @@
   .ob-track { transition-duration: .01ms; }
 }
 
+/* Login */
+.login { position: fixed; inset: 0; z-index: 96; background: var(--white); overflow-y: auto; display: flex; justify-content: center; align-items: flex-start; padding: max(24px, env(safe-area-inset-top)) 20px max(24px, env(safe-area-inset-bottom)); }
+.login-card { width: 100%; max-width: 420px; margin: auto; display: flex; flex-direction: column; align-items: center; text-align: center; }
+.login-logo { height: 34px; width: auto; margin-bottom: clamp(8px, 3vh, 24px); }
+.login-ilu { width: min(56vw, 230px); aspect-ratio: 1 / 1; object-fit: contain; margin-bottom: clamp(8px, 2vh, 18px); }
+.login-title { font-family: var(--font-display); font-weight: 800; color: var(--blue); font-size: clamp(28px, 7.2vw, 36px); line-height: 1.1; }
+.login-sub { color: var(--muted); font-size: clamp(15px, 4vw, 18px); line-height: 1.4; margin-top: 8px; }
+.login-sub b { color: var(--green-strong); font-weight: 700; }
+.login-fields { width: 100%; display: flex; flex-direction: column; gap: 12px; margin: clamp(20px, 4vh, 32px) 0 0; }
+.login-input { width: 100%; padding: 15px 20px; font-size: 16px; color: var(--ink); background: var(--white); border: 1.5px solid var(--line); border-radius: var(--r-pill); transition: border-color .15s, box-shadow .15s; }
+.login-input::placeholder { color: var(--muted); }
+.login-input:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-soft); }
+.login-input.err { border-color: var(--st-error); }
+.login-error { display: flex; align-items: center; gap: 8px; width: 100%; margin-top: 12px; font-size: 13px; font-weight: 600; color: var(--st-error); background: var(--st-error-bg); border-radius: var(--r-md); padding: 11px 14px; text-align: left; }
+.login-btn { width: 100%; margin-top: 16px; padding: 15px 20px; font-size: 16px; }
+.login-legal { margin-top: clamp(20px, 4vh, 32px); font-size: 12px; color: var(--muted); line-height: 1.5; }
+.login-legal b { color: var(--ink); font-weight: 700; }
+
+/* Transición de ingreso al dashboard */
+.ingreso { position: fixed; inset: 0; z-index: 99; background: var(--blue); display: flex; align-items: center; justify-content: center; animation: ingresoVeil .9s ease forwards; }
+.ingreso-logo { width: min(60vw, 260px); animation: ingresoLogo .9s cubic-bezier(.22, .61, .36, 1) forwards; }
+@keyframes ingresoVeil { 0% { opacity: 0; } 15% { opacity: 1; } 65% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes ingresoLogo { 0% { transform: scale(.8); opacity: 0; } 22% { transform: scale(1); opacity: 1; } 60% { transform: scale(1); } 100% { transform: scale(1.06); opacity: 0; } }
+
+/* Modal genérico (carga de planilla) */
+.modal-ov { position: fixed; inset: 0; z-index: 92; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(16, 26, 48, .45); backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px); animation: welcomeBg .3s ease both; }
+.modal-card { position: relative; width: 100%; max-width: 440px; background: var(--white); border-radius: var(--r-lg); padding: 24px; text-align: center; box-shadow: 0 24px 60px rgba(16, 26, 48, .28); animation: welcomeCard .42s cubic-bezier(.22, .61, .36, 1) both; }
+.modal-x { position: absolute; top: 12px; right: 12px; width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; border: none; background: var(--surface); color: var(--muted); border-radius: var(--r-pill); }
+.modal-icon { width: 52px; height: 52px; margin: 0 auto 12px; border-radius: 50%; background: var(--blue-soft); color: var(--blue); display: flex; align-items: center; justify-content: center; }
+.modal-icon .mi { font-size: 28px; }
+.modal-card h2 { font-family: var(--font-display); font-size: 19px; font-weight: 800; color: var(--ink); }
+.modal-sub { font-size: 13px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+.opt { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 14px; margin-top: 12px; transition: border-color .15s, background .15s; }
+.opt:hover { border-color: var(--blue); background: var(--white); }
+.opt:active { transform: translateY(1px); }
+.opt-ic { flex: 0 0 auto; width: 42px; height: 42px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; }
+.opt-ic--blue { background: var(--blue-soft); color: var(--blue); }
+.opt-ic--green { background: var(--green-soft); color: var(--green-strong); }
+.opt-txt { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.opt-txt b { font-family: var(--font-display); font-weight: 700; font-size: 14px; color: var(--ink); }
+.opt-txt span { font-size: 12px; color: var(--muted); line-height: 1.4; }
+.opt-arrow { color: var(--muted); }
+@media (prefers-reduced-motion: reduce) {
+  .ingreso, .ingreso-logo, .modal-ov, .modal-card { animation-duration: .01ms; }
+}
+
 /* Modal de bienvenida (fondo con blur) */
 .welcome { position: fixed; inset: 0; z-index: 90; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(16, 26, 48, .45); backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px); animation: welcomeBg .3s ease both; }
 .welcome-card { width: 100%; max-width: 420px; background: var(--white); border-radius: var(--r-lg); padding: 26px 24px; text-align: center; box-shadow: 0 24px 60px rgba(16, 26, 48, .28); animation: welcomeCard .42s cubic-bezier(.22, .61, .36, 1) both; }

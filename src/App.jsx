@@ -5,6 +5,8 @@ import Splash from "./Splash.jsx";
 import ProgresoPanel from "./ProgresoPanel.jsx";
 import Bienvenida from "./Bienvenida.jsx";
 import Onboarding from "./Onboarding.jsx";
+import Login from "./Login.jsx";
+import EvalModal from "./EvalModal.jsx";
 import logoFull from "../img/logo_fleniapp.svg";
 import simbolo from "../img/favicon.svg";
 import "./App.css";
@@ -84,7 +86,6 @@ export default function App() {
   const [medicion, setMedicion] = useState(() => ({ ...medicionVacia(), ...(guardado?.medicion || {}) }));
   const [escalas, setEscalas] = useState(() => initEscalas(guardado?.escalas || guardado || {}));
   const [historial, setHistorial] = useState(() => (Array.isArray(guardado?.historial) ? guardado.historial : []));
-  const [ultimaImportada, setUltimaImportada] = useState(null);
 
   const [restaurado, setRestaurado] = useState(!!guardado);
   const [aviso, setAviso] = useState("");
@@ -96,6 +97,21 @@ export default function App() {
     setOnboarding(false);
     try { localStorage.setItem("fleni-onboarding-v1", "1"); } catch { /* noop */ }
   };
+  // Autenticación del prototipo (sessionStorage: dura la sesión, pide login en una nueva)
+  const [logueado, setLogueado] = useState(() => {
+    try { return sessionStorage.getItem("fleni-auth-v1") === "1"; } catch { return false; }
+  });
+  const [entrando, setEntrando] = useState(false); // animación transicional al dashboard
+  const ingresar = () => {
+    try { sessionStorage.setItem("fleni-auth-v1", "1"); } catch { /* noop */ }
+    setLogueado(true);
+    setEntrando(true);
+    setTimeout(() => setEntrando(false), 900);
+  };
+
+  // Modal de carga de planilla (Nueva evaluación / Continuar evaluación)
+  const [importPend, setImportPend] = useState(null);
+
   // Modal de bienvenida: solo si no hay una evaluación en curso recuperada
   const [bienvenida, setBienvenida] = useState(!guardado);
   // Navbar: el logotipo se colapsa al símbolo al hacer scroll
@@ -158,29 +174,40 @@ export default function App() {
     if (!file) return;
     try {
       const { registros: regs } = await importarExcel(file);
-      const ultima = regs[regs.length - 1];
-      // Todas las evaluaciones del archivo van al historial; se prepara una NUEVA medición.
-      setHistorial(regs);
-      setDatos({ ...datosVacios(), ...ultima.datos, fechaEval: hoyISO() });
-      setMedicion(medicionVacia());
-      setEscalas(initEscalas({}));
-      setUltimaImportada(ultima);
-      setRestaurado(false);
-      const fechas = regs.map((r) => r.datos.fechaEval || "s/f").join(", ");
-      setAviso(
-        `Cargué ${regs.length} evaluación(es) al historial (${fechas}). Completá la nueva medición: al exportar vas a ver la comparación en Progreso y en el Excel.`
-      );
+      // No se aplica todavía: se abre el modal para que el kinesiólogo elija.
+      setImportPend(regs);
     } catch (err) {
       setAviso(err?.message || "No se pudo leer el archivo. Subí un .xlsx exportado por la app.");
     }
   };
 
-  const continuarUltima = () => {
-    if (!ultimaImportada) return;
-    aplicarRegistro(ultimaImportada);
-    setHistorial((h) => h.filter((r) => r !== ultimaImportada));
-    setUltimaImportada(null);
-    setAviso("Seguís editando la última evaluación importada.");
+  // Opción del modal: NUEVA evaluación (todas al historial, medición nueva con fecha de hoy)
+  const importNueva = () => {
+    const regs = importPend;
+    if (!regs) return;
+    const ultima = regs[regs.length - 1];
+    setHistorial(regs);
+    setDatos({ ...datosVacios(), ...ultima.datos, fechaEval: hoyISO() });
+    setMedicion(medicionVacia());
+    setEscalas(initEscalas({}));
+    setRestaurado(false);
+    setImportPend(null);
+    setTab("paciente");
+    const fechas = regs.map((r) => r.datos.fechaEval || "s/f").join(", ");
+    setAviso(`Nueva evaluación iniciada. Historial cargado (${fechas}); al exportar vas a ver la comparación en Progreso y en el Excel.`);
+  };
+
+  // Opción del modal: CONTINUAR la última evaluación del archivo
+  const importContinuar = () => {
+    const regs = importPend;
+    if (!regs) return;
+    const ultima = regs[regs.length - 1];
+    aplicarRegistro(ultima);
+    setHistorial(regs.slice(0, -1));
+    setRestaurado(false);
+    setImportPend(null);
+    setTab("paciente");
+    setAviso(`Seguís completando la evaluación del ${ultima.datos.fechaEval || "última fecha"}.`);
   };
 
   const empezarDeCero = () => {
@@ -188,7 +215,6 @@ export default function App() {
     setMedicion(medicionVacia());
     setEscalas(initEscalas({}));
     setHistorial([]);
-    setUltimaImportada(null);
     setRestaurado(false);
     setAviso("");
     try { localStorage.removeItem(STORAGE_KEY); } catch { /* noop */ }
@@ -204,7 +230,25 @@ export default function App() {
     <div className="app">
       <Splash />
       {onboarding && <Onboarding onFinish={cerrarOnboarding} />}
-      {!onboarding && bienvenida && <Bienvenida onCargar={bienvenidaCargar} onNueva={bienvenidaNueva} />}
+      {!onboarding && !logueado && <Login onSuccess={ingresar} />}
+      {!onboarding && logueado && bienvenida && <Bienvenida onCargar={bienvenidaCargar} onNueva={bienvenidaNueva} />}
+      {importPend && (
+        <EvalModal
+          info={{
+            nombre: importPend[importPend.length - 1]?.datos?.apellidoNombre,
+            fechas: importPend.map((r) => r.datos.fechaEval || "s/f"),
+            ultima: importPend[importPend.length - 1]?.datos?.fechaEval,
+          }}
+          onNueva={importNueva}
+          onContinuar={importContinuar}
+          onClose={() => setImportPend(null)}
+        />
+      )}
+      {entrando && (
+        <div className="ingreso" aria-hidden="true">
+          <img src={logoFull} alt="" className="ingreso-logo" />
+        </div>
+      )}
       <header className="bar">
         <div className={"brandwrap" + (miniLogo ? " min" : "")} aria-label="Fleni App" title="Fleni App">
           <img className="logo-full" src={logoFull} alt="Fleni App" />
@@ -237,12 +281,7 @@ export default function App() {
           {aviso && (
             <div className="aviso">
               <span>{aviso}</span>
-              <div className="aviso-acc">
-                {ultimaImportada && (
-                  <button onClick={continuarUltima}><Mi name="edit" className="sm" />Continuar la última</button>
-                )}
-                <button onClick={() => setAviso("")}><Mi name="close" className="sm" />OK</button>
-              </div>
+              <button onClick={() => setAviso("")}><Mi name="close" className="sm" />OK</button>
             </div>
           )}
         </div>
