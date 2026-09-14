@@ -4,6 +4,7 @@ import art2 from "../img/ilustracion-02.svg";
 import art3 from "../img/ilustracion-03.svg";
 import art4 from "../img/ilustracion-04.svg";
 import art5 from "../img/ilustracion-05.svg";
+import art6 from "../img/pantalla-progreso-06.png";
 
 const Mi = ({ name, className = "" }) => <span className={"mi " + className} aria-hidden="true">{name}</span>;
 
@@ -32,6 +33,11 @@ const SLIDES = [
     img: art5,
     title: "¿Cómo exporto la planilla?",
     body: "“Compartir” la manda por WhatsApp u otro medio; “Descargar” la guarda en tu dispositivo. En ambos casos se genera un Excel.",
+  },
+  {
+    img: art6,
+    title: "¿Sabías que podés ver el progreso?",
+    body: "Cargá la plantilla del mes anterior (o del mes que quieras) y se armará una comparativa entre la planilla actual y la que cargues.",
   },
 ];
 
