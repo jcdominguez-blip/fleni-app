@@ -22,10 +22,12 @@ export default function ShareModal({ actual, historial, onClose }) {
     generarArchivo(actual, historial)
       .then((a) => {
         if (!vivo) return;
-        const ok = puedeCompartirArchivo(a.file);
+        // El menú nativo solo tiene sentido en celular (adjunta el archivo).
+        // En computadora vamos directo a las opciones manuales (WhatsApp/Mail/Descargar).
+        const usarNativo = puedeCompartirArchivo(a.file) && esMobile();
         setArch(a);
-        setPuede(ok);
-        setManual(!ok); // sin compartir nativo → directo a manual
+        setPuede(usarNativo);
+        setManual(!usarNativo);
         setCargando(false);
       })
       .catch(() => vivo && setCargando(false));
@@ -50,11 +52,15 @@ export default function ShareModal({ actual, historial, onClose }) {
   const descargar = () => { descargarBlob(arch.blob, arch.nombre); setGuia("descarga"); };
 
   const porWhatsApp = () => {
-    descargarBlob(arch.blob, arch.nombre);
     if (esMobile()) {
+      // Celular: abre la app de WhatsApp y descarga el Excel para adjuntar.
+      descargarBlob(arch.blob, arch.nombre);
       window.location.href = `whatsapp://send?text=${encodeURIComponent(cuerpo)}`;
     } else {
-      window.open("https://web.whatsapp.com/", "_blank", "noopener");
+      // Desktop: abrir WhatsApp Web PRIMERO (si no, el navegador bloquea el popup),
+      // y recién después descargar el Excel para adjuntarlo.
+      window.open("https://web.whatsapp.com/", "_blank");
+      setTimeout(() => descargarBlob(arch.blob, arch.nombre), 400);
     }
     setGuia("wa");
   };
