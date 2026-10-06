@@ -163,7 +163,7 @@
 @keyframes ingresoVeil { 0% { opacity: 0; } 15% { opacity: 1; } 65% { opacity: 1; } 100% { opacity: 0; } }
 @keyframes ingresoLogo { 0% { transform: scale(.8); opacity: 0; } 22% { transform: scale(1); opacity: 1; } 60% { transform: scale(1); } 100% { transform: scale(1.06); opacity: 0; } }
 
-/* Modal genérico (carga de planilla) */
+/* Modal genérico (carga de evaluación) */
 .modal-ov { position: fixed; inset: 0; z-index: 92; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(16, 26, 48, .45); backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px); animation: welcomeBg .3s ease both; }
 .modal-card { position: relative; width: 100%; max-width: 440px; background: var(--white); border-radius: var(--r-lg); padding: 24px; text-align: center; box-shadow: 0 24px 60px rgba(16, 26, 48, .28); animation: welcomeCard .42s cubic-bezier(.22, .61, .36, 1) both; }
 .modal-x { position: absolute; top: 12px; right: 12px; width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; border: none; background: var(--surface); color: var(--muted); border-radius: var(--r-pill); }
@@ -181,6 +181,9 @@
 .opt-txt b { font-family: var(--font-display); font-weight: 700; font-size: 14px; color: var(--ink); }
 .opt-txt span { font-size: 12px; color: var(--muted); line-height: 1.4; }
 .opt-arrow { color: var(--muted); }
+.share-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; }
+.share-actions .btn { width: 100%; }
+.share-hint { margin-top: 14px; font-size: 12px; color: var(--muted); line-height: 1.5; background: var(--surface); border-radius: var(--r-md); padding: 11px 13px; text-align: left; }
 @media (prefers-reduced-motion: reduce) {
   .ingreso, .ingreso-logo, .modal-ov, .modal-card { animation-duration: .01ms; }
 }

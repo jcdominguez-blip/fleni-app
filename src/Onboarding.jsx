@@ -12,32 +12,32 @@ const SLIDES = [
   {
     img: art1,
     title: "¡Bienvenido/a!",
-    body: "La app de planillas de evaluación para kinesiólogos del Fleni.",
+    body: "La app de evaluaciones kinésicas digitales del Fleni.",
   },
   {
     img: art2,
     title: "¿Por dónde empiezo?",
-    body: "Podés cargar la planilla de un paciente para continuar su evaluación, o empezar una planilla nueva desde cero.",
+    body: "Podés cargar la evaluación de un paciente para continuarla, o empezar una evaluación nueva desde cero.",
   },
   {
     img: art3,
-    title: "¿Cómo cargo una planilla?",
-    body: "Tocá “Cargar planilla” arriba a la derecha y elegí el Excel desde tus archivos.",
+    title: "¿Cómo cargo una evaluación?",
+    body: "Tocá “Cargar evaluación” arriba a la derecha y elegí el Excel desde tus archivos.",
   },
   {
     img: art4,
     title: "¡Cargá los datos!",
-    body: "En una planilla nueva completá todos los datos. Si cargaste una ya empezada, seguís desde donde la dejaron.",
+    body: "En una evaluación nueva completá todos los datos. Si cargaste una ya empezada, seguís desde donde la dejaron.",
   },
   {
     img: art5,
-    title: "¿Cómo exporto la planilla?",
+    title: "¿Cómo exporto la evaluación?",
     body: "“Compartir” la manda por WhatsApp u otro medio; “Descargar” la guarda en tu dispositivo. En ambos casos se genera un Excel.",
   },
   {
     img: art6,
     title: "¿Sabías que podés ver el progreso?",
-    body: "Cargá la plantilla del mes anterior (o del mes que quieras) y se armará una comparativa entre la planilla actual y la que cargues.",
+    body: "Cargá la evaluación del mes anterior (o del mes que quieras) y se armará una comparativa entre la evaluación actual y la que cargues.",
   },
 ];
 

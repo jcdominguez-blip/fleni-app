@@ -52,7 +52,7 @@ export async function construirWorkbookBuffer(actual, historial = []) {
   titulo.getCell(1).fill = fill(C.blue);
   titulo.getCell(1).alignment = { vertical: "middle", horizontal: "left", indent: 1 };
 
-  const sub = ws.addRow([`Kinesiología · Prototipo · Fecha: ${datos.fechaEval || "—"}`]);
+  const sub = ws.addRow([`Kinesiología · Fecha: ${datos.fechaEval || "—"}`]);
   ws.mergeCells(sub.number, 1, sub.number, 3);
   sub.getCell(1).font = { name: "Arial", size: 10, italic: true, color: { argb: C.muted } };
   sub.getCell(1).alignment = { indent: 1 };
@@ -248,9 +248,25 @@ async function generarBlob(actual, historial) {
   });
 }
 
-export async function descargarExcel(actual, historial = []) {
+// Genera el Excel una sola vez y devuelve lo necesario para compartir o descargar.
+export async function generarArchivo(actual, historial = []) {
   const blob = await generarBlob(actual, historial);
   const nombre = nombreArchivo(actual.datos);
+  const file = new File([blob], nombre, { type: blob.type });
+  return { blob, file, nombre };
+}
+
+// ¿El dispositivo puede compartir archivos por el menú nativo? (celular, típicamente)
+export function puedeCompartirArchivo(file) {
+  try {
+    return !!(navigator.canShare && file && navigator.canShare({ files: [file] }));
+  } catch {
+    return false;
+  }
+}
+
+// Descarga un blob ya generado.
+export function descargarBlob(blob, nombre) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -261,18 +277,24 @@ export async function descargarExcel(actual, historial = []) {
   setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 
-export async function compartirExcel(actual, historial = []) {
-  const blob = await generarBlob(actual, historial);
-  const nombre = nombreArchivo(actual.datos);
-  const file = new File([blob], nombre, { type: blob.type });
-  if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    try {
-      await navigator.share({ files: [file], title: "Evaluación kinésica", text: `Evaluación — ${actual.datos.apellidoNombre || "paciente"}` });
-      return true;
-    } catch (err) {
-      if (err && err.name === "AbortError") return false;
-    }
+export async function descargarExcel(actual, historial = []) {
+  const { blob, nombre } = await generarArchivo(actual, historial);
+  descargarBlob(blob, nombre);
+}
+
+// Comparte el archivo por el menú nativo (adjunta el Excel). Devuelve
+// "ok" | "cancel" | "unsupported".
+export async function compartirArchivoNativo(file, nombrePaciente) {
+  if (!puedeCompartirArchivo(file)) return "unsupported";
+  try {
+    await navigator.share({
+      files: [file],
+      title: "Evaluación kinésica",
+      text: `Evaluación kinésica — ${nombrePaciente || "paciente"}`,
+    });
+    return "ok";
+  } catch (err) {
+    if (err && err.name === "AbortError") return "cancel";
+    return "unsupported";
   }
-  await descargarExcel(actual, historial);
-  return false;
 }

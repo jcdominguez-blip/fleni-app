@@ -1,4 +1,4 @@
-// Datos reales de las planillas FLENI (Kinesiología).
+// Datos reales de las evaluaciones FLENI (Kinesiología).
 // RANGOS DE PUNTAJE PROVISORIOS — a confirmar con el equipo:
 //   COVS 1-7, ABS 1-4, AM-PAC 1-4, Berg 0-4, FGA 0-3, HIMAT 0-5.
 // `mejorSube`: si un puntaje más alto es MEJOR (true) o PEOR (false, ej. ABS = agitación).

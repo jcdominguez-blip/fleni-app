@@ -9,21 +9,21 @@ export default function Bienvenida({ onCargar, onNueva }) {
       <div className="welcome-card">
         <div className="welcome-icon"><Mi name="assignment" /></div>
         <h2 id="welcome-title">Bienvenido/a a Fleni App</h2>
-        <p className="welcome-sub">Planillas de evaluación kinésica. Elegí cómo empezar:</p>
+        <p className="welcome-sub">Evaluaciones kinésicas digitales. Elegí cómo empezar:</p>
 
         <div className="welcome-actions">
           <button className="btn solid" onClick={onCargar}>
-            <Mi name="upload_file" />Cargar planilla del paciente
+            <Mi name="upload_file" />Cargar evaluación del paciente
           </button>
           <button className="btn ghost" onClick={onNueva}>
-            <Mi name="note_add" />Empezar planilla nueva
+            <Mi name="note_add" />Empezar evaluación nueva
           </button>
         </div>
 
         <p className="welcome-hint">
-          <b>Cargar planilla:</b> continuá la evaluación de un paciente desde un Excel exportado antes.
+          <b>Cargar evaluación:</b> continuá la de un paciente desde un Excel exportado antes.
           <br />
-          <b>Planilla nueva:</b> empezá una evaluación desde cero.
+          <b>Evaluación nueva:</b> empezá una evaluación desde cero.
         </p>
       </div>
     </div>

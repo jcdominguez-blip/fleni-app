@@ -1,12 +1,13 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { DATOS, MEDICION, SCALES, SCALE_KEYS } from "./scales.js";
-import { compartirExcel, descargarExcel, importarExcel, mergeRegistros } from "./exportar.js";
+import { descargarExcel, importarExcel, mergeRegistros } from "./exportar.js";
 import Splash from "./Splash.jsx";
 import ProgresoPanel from "./ProgresoPanel.jsx";
 import Bienvenida from "./Bienvenida.jsx";
 import Onboarding from "./Onboarding.jsx";
 import Login from "./Login.jsx";
 import EvalModal from "./EvalModal.jsx";
+import ShareModal from "./ShareModal.jsx";
 import logoFull from "../img/logo_fleniapp.svg";
 import simbolo from "../img/favicon.svg";
 import "./App.css";
@@ -109,8 +110,10 @@ export default function App() {
     setTimeout(() => setEntrando(false), 900);
   };
 
-  // Modal de carga de planilla (Nueva evaluación / Continuar evaluación)
+  // Modal de carga de evaluación (Nueva evaluación / Continuar evaluación)
   const [importPend, setImportPend] = useState(null);
+  // Modal de compartir el Excel
+  const [shareOpen, setShareOpen] = useState(false);
 
   // Modal de bienvenida: solo si no hay una evaluación en curso recuperada
   const [bienvenida, setBienvenida] = useState(!guardado);
@@ -145,7 +148,7 @@ export default function App() {
   const filled = SCALE_KEYS.reduce((a, k) => a + cnt(escalas[k]), 0);
   const totalItems = SCALE_KEYS.reduce((a, k) => a + SCALES[k].labels.length, 0);
 
-  const onCompartir = () => compartirExcel(actual, historial);
+  const onCompartir = () => setShareOpen(true);
   const onDescargar = () => descargarExcel(actual, historial);
   const abrirImport = () => fileRef.current?.click();
 
@@ -235,6 +238,7 @@ export default function App() {
           onClose={() => setImportPend(null)}
         />
       )}
+      {shareOpen && <ShareModal actual={actual} historial={historial} onClose={() => setShareOpen(false)} />}
       {entrando && (
         <div className="ingreso" aria-hidden="true">
           <img src={logoFull} alt="" className="ingreso-logo" />
@@ -245,12 +249,12 @@ export default function App() {
           <img src={simbolo} alt="Fleni App" />
         </div>
         <div className="titles">
-          <div className="eyebrow">FLENI · Kinesiología — prototipo</div>
+          <div className="eyebrow">FLENI · Kinesiología</div>
           <h1>Evaluación kinésica digital</h1>
         </div>
-        <button className="barbtn" onClick={abrirImport} title="Cargar una planilla exportada del paciente">
+        <button className="barbtn" onClick={abrirImport} title="Cargar una evaluación exportada del paciente">
           <Mi name="upload_file" className="sm" />
-          Cargar planilla
+          Cargar evaluación
         </button>
         <input ref={fileRef} type="file" accept=".xlsx" hidden onChange={onImportar} />
       </header>
@@ -343,20 +347,20 @@ export default function App() {
               <div>
                 <h3>Guardar / continuar esta evaluación</h3>
                 <p>
-                  La planilla se puede llenar por turnos. <b>Compartí</b> o <b>descargá</b> el Excel al terminar tu
-                  parte; en el próximo turno, <b>Importá</b> ese archivo para seguir donde quedó.
+                  La evaluación se puede llenar por turnos. <b>Compartí</b> o <b>descargá</b> el Excel al terminar tu
+                  parte; en el próximo turno, <b>cargá</b> ese archivo para seguir donde quedó.
                 </p>
               </div>
               <div className="exportbtns">
                 <button className="btn solid" onClick={onCompartir}><Mi name="ios_share" />Compartir Excel</button>
                 <button className="btn ghost-light" onClick={onDescargar}><Mi name="download" />Descargar .xlsx</button>
-                <button className="btn ghost-light" onClick={abrirImport}><Mi name="upload_file" />Cargar planilla del paciente</button>
+                <button className="btn ghost-light" onClick={abrirImport}><Mi name="upload_file" />Cargar evaluación del paciente</button>
               </div>
             </div>
 
             <p className="disc">
-              Prototipo de validación. Rangos de puntaje provisorios (a confirmar con Kinesiología). No usar con datos
-              reales de pacientes.
+              Información de salud confidencial — Leyes Nacionales N° 26.529 y N° 25.326. Rangos de puntaje a confirmar
+              con Kinesiología.
             </p>
           </div>
         )}

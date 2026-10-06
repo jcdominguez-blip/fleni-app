@@ -2,7 +2,7 @@ import React from "react";
 
 const Mi = ({ name, className = "" }) => <span className={"mi " + className} aria-hidden="true">{name}</span>;
 
-// Modal que aparece al cargar una planilla: define si se inicia una nueva
+// Modal que aparece al cargar una evaluación: define si se inicia una nueva
 // evaluación (ingreso/mensual, para medir progreso) o se continúa la última.
 export default function EvalModal({ info, onNueva, onContinuar, onClose }) {
   const { nombre, fechas = [], ultima } = info || {};
@@ -12,9 +12,9 @@ export default function EvalModal({ info, onNueva, onContinuar, onClose }) {
         <button className="modal-x" onClick={onClose} aria-label="Cerrar"><Mi name="close" /></button>
 
         <div className="modal-icon"><Mi name="assignment_turned_in" /></div>
-        <h2 id="evalmodal-title">¿Cómo seguimos con esta planilla?</h2>
+        <h2 id="evalmodal-title">¿Cómo seguimos con esta evaluación?</h2>
         <p className="modal-sub">
-          Cargaste la planilla{nombre ? <> de <b>{nombre}</b></> : ""}
+          Cargaste la evaluación{nombre ? <> de <b>{nombre}</b></> : ""}
           {fechas.length > 0 && <> · {fechas.length} evaluación(es): {fechas.join(", ")}</>}.
           Elegí cómo continuar:
         </p>

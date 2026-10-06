@@ -35,7 +35,7 @@ export default function Login({ onSuccess }) {
 
         <h1 className="login-title">Iniciar sesión</h1>
         <p className="login-sub">
-          Accedé al portal de planillas de manera <b>rápida y segura</b>
+          Accedé al portal de evaluaciones de manera <b>rápida y segura</b>
         </p>
 
         <div className="login-fields">
