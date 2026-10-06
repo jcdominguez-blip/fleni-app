@@ -3,13 +3,18 @@ import { generarArchivo, puedeCompartirArchivo, descargarBlob, compartirArchivoN
 
 const Mi = ({ name, className = "" }) => <span className={"mi " + className} aria-hidden="true">{name}</span>;
 
-// Modal de compartir el Excel, adaptado al dispositivo.
-// - Celular: menú nativo (adjunta el archivo; ahí se elige WhatsApp / Mail).
-// - Computadora: descarga el Excel y abre WhatsApp Web / el mail para adjuntarlo.
+const esMobile = () =>
+  typeof navigator !== "undefined" &&
+  (/Android|iPhone|iPad|iPod|Mobi/i.test(navigator.userAgent) || (navigator.maxTouchPoints || 0) > 1);
+
+// Modal de compartir el Excel, robusto en todo dispositivo:
+// - Celular: menú nativo (adjunta el archivo). Si falla, cae a envío manual.
+// - Computadora / fallback: descarga el Excel y abre WhatsApp Web / el mail para adjuntarlo.
 export default function ShareModal({ actual, historial, onClose }) {
   const [arch, setArch] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [puede, setPuede] = useState(false);
+  const [manual, setManual] = useState(false); // mostrar envío manual (WhatsApp/Mail)
   const [guia, setGuia] = useState("");
 
   useEffect(() => {
@@ -17,8 +22,10 @@ export default function ShareModal({ actual, historial, onClose }) {
     generarArchivo(actual, historial)
       .then((a) => {
         if (!vivo) return;
+        const ok = puedeCompartirArchivo(a.file);
         setArch(a);
-        setPuede(puedeCompartirArchivo(a.file));
+        setPuede(ok);
+        setManual(!ok); // sin compartir nativo → directo a manual
         setCargando(false);
       })
       .catch(() => vivo && setCargando(false));
@@ -29,17 +36,29 @@ export default function ShareModal({ actual, historial, onClose }) {
   const asunto = `Evaluación kinésica — ${nombrePac}`;
   const cuerpo = `Adjunto la evaluación kinésica de ${nombrePac} (se exportó en Excel).`;
 
-  const compartir = async () => {
+  // Menú nativo (celular). Si falla por cualquier motivo → descarga + envío manual.
+  const compartirNativo = async () => {
     const r = await compartirArchivoNativo(arch.file, nombrePac);
-    if (r === "ok") onClose();
-    else if (r === "unsupported") setGuia("No se pudo abrir el menú de compartir. Descargá el Excel y adjuntalo manualmente.");
+    if (r === "ok") { onClose(); return; }
+    if (r === "cancel") return; // el usuario cerró el menú a propósito
+    // "unsupported" o error: aseguramos que algo pase
+    descargarBlob(arch.blob, arch.nombre);
+    setManual(true);
+    setGuia("fallback");
   };
+
   const descargar = () => { descargarBlob(arch.blob, arch.nombre); setGuia("descarga"); };
+
   const porWhatsApp = () => {
     descargarBlob(arch.blob, arch.nombre);
-    window.open("https://web.whatsapp.com/", "_blank", "noopener");
+    if (esMobile()) {
+      window.location.href = `whatsapp://send?text=${encodeURIComponent(cuerpo)}`;
+    } else {
+      window.open("https://web.whatsapp.com/", "_blank", "noopener");
+    }
     setGuia("wa");
   };
+
   const porMail = () => {
     descargarBlob(arch.blob, arch.nombre);
     window.location.href = `mailto:?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
@@ -47,8 +66,9 @@ export default function ShareModal({ actual, historial, onClose }) {
   };
 
   const guiaTxt = {
+    fallback: "No se pudo abrir el menú de compartir. Descargamos el Excel: elegí WhatsApp o Mail y adjuntalo.",
     descarga: "Listo, descargamos el Excel. Adjuntalo donde quieras enviarlo.",
-    wa: "Descargamos el Excel y abrimos WhatsApp. Adjuntá el archivo en la conversación.",
+    wa: "Descargamos el Excel y abrimos WhatsApp. Elegí el chat y adjuntá el archivo (📎).",
     mail: "Descargamos el Excel y abrimos tu mail. Adjuntá el archivo antes de enviar.",
   }[guia];
 
@@ -62,13 +82,14 @@ export default function ShareModal({ actual, historial, onClose }) {
 
         {cargando ? (
           <p className="share-hint" style={{ textAlign: "center" }}>Generando el Excel…</p>
-        ) : puede ? (
+        ) : !manual ? (
           <>
             <div className="share-actions">
-              <button className="btn solid" onClick={compartir}><Mi name="ios_share" />Compartir por WhatsApp o Mail</button>
+              <button className="btn solid" onClick={compartirNativo}><Mi name="ios_share" />Compartir por WhatsApp o Mail</button>
               <button className="btn ghost" onClick={descargar}><Mi name="download" />Descargar .xlsx</button>
             </div>
             <p className="share-hint">Se abre el menú del teléfono: elegí <b>WhatsApp</b> o <b>Mail</b> y la evaluación va con el Excel adjunto.</p>
+            <button className="share-link" onClick={() => setManual(true)}>¿No se abre? Enviá manualmente</button>
           </>
         ) : (
           <>
@@ -78,7 +99,7 @@ export default function ShareModal({ actual, historial, onClose }) {
               <button className="btn ghost" onClick={descargar}><Mi name="download" />Solo descargar .xlsx</button>
             </div>
             <p className="share-hint">
-              {guiaTxt || "En computadora el Excel no se adjunta solo: descargamos el archivo y abrimos la app para que lo adjuntes en un paso."}
+              {guiaTxt || "Descargamos el Excel y abrimos la app (WhatsApp o Mail) para que lo adjuntes en un paso. En computadora el adjunto no se puede automatizar."}
             </p>
           </>
         )}
