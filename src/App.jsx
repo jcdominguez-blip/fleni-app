@@ -12,8 +12,11 @@ import logoFull from "../img/logo_fleniapp.svg";
 import simbolo from "../img/favicon.svg";
 import "./App.css";
 
+// Un ítem está "respondido" si tiene un número o si se marcó "No aplica" (NA).
+const esNA = (x) => x === "NA";
+const respondido = (x) => typeof x === "number" || esNA(x);
 const sum = (arr) => arr.reduce((a, b) => a + (typeof b === "number" ? b : 0), 0);
-const cnt = (arr) => arr.filter((x) => typeof x === "number").length;
+const cnt = (arr) => arr.filter(respondido).length;
 const hoyISO = () => new Date().toISOString().slice(0, 10);
 const datosVacios = () => Object.fromEntries(DATOS.map((d) => [d[0], ""]));
 const medicionVacia = () => Object.fromEntries(MEDICION.map((m) => [m[0], ""]));
@@ -216,7 +219,7 @@ export default function App() {
 
   const TABS = [
     ["paciente", "Paciente"], ["covs", "COVS"], ["abs", "ABS"], ["ampac", "AM-PAC"],
-    ["bbs", "Berg"], ["fga", "FGA"], ["himat", "HIMAT"], ["medicion", "Medición"],
+    ["bbs", "Berg"], ["fga", "FGA"], ["himat", "HIMAT"], ["fac", "FAC"], ["medicion", "Medición"],
     ["resumen", "Resumen"], ["progreso", "Progreso"],
   ];
 
@@ -310,7 +313,17 @@ export default function App() {
           </>
         )}
 
-        {SCALE_KEYS.includes(tab) && (
+        {tab === "fac" && (
+          <FacPanel
+            scale={SCALES.fac}
+            value={escalas.fac[0]}
+            onSet={(v) => setItem("fac", 0, v)}
+            onCompartir={onCompartir}
+            onDescargar={onDescargar}
+          />
+        )}
+
+        {SCALE_KEYS.includes(tab) && tab !== "fac" && (
           <ScalePanel
             scale={SCALES[tab]}
             values={escalas[tab]}
@@ -399,6 +412,12 @@ function ScalePanel({ scale, values, total, hechos, onSet, onCompartir, onDescar
                   {o}
                 </button>
               ))}
+              <button
+                className={"sbtn sbtn-na" + (values[i] === "NA" ? " on" : "")}
+                onClick={() => onSet(i, values[i] === "NA" ? "" : "NA")}
+              >
+                No aplica
+              </button>
             </div>
           </div>
         ))}
@@ -411,6 +430,55 @@ function ScalePanel({ scale, values, total, hechos, onSet, onCompartir, onDescar
             Exportá la evaluación hasta acá {falta > 0 ? `(faltan ${falta} ítems de esta escala) ` : ""}
             para guardarla o pasar el turno.
           </span>
+        </div>
+        <div className="scalefoot-btns">
+          <button className="btn solid" onClick={onCompartir}><Mi name="ios_share" />Compartir Excel</button>
+          <button className="btn ghost" onClick={onDescargar}><Mi name="download" />Descargar .xlsx</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// FAC: selección única de nivel de ambulación (0–5) o "No aplica".
+function FacPanel({ scale, value, onSet, onCompartir, onDescargar }) {
+  const sel = (v) => onSet(value === v ? "" : v);
+  const badge = value === "NA" ? "N/A" : typeof value === "number" ? value : "—";
+  const elegido = typeof value === "number" || value === "NA";
+  return (
+    <div>
+      <div className="scalehead">
+        <div>
+          <h3>{scale.name}</h3>
+          <span className="eyebrow">{scale.nota}</span>
+        </div>
+        <div className="totbadge"><b>{badge}</b><span>nivel</span></div>
+      </div>
+
+      <div className="fac-levels">
+        {scale.niveles.map((n) => (
+          <button
+            key={n.nivel}
+            className={"fac-level" + (value === n.nivel ? " on" : "")}
+            onClick={() => sel(n.nivel)}
+          >
+            <span className="fac-num">{n.nivel}</span>
+            <span className="fac-txt">{n.texto}</span>
+          </button>
+        ))}
+        <button
+          className={"fac-level fac-na" + (value === "NA" ? " on" : "")}
+          onClick={() => sel("NA")}
+        >
+          <span className="fac-num">—</span>
+          <span className="fac-txt">No aplica</span>
+        </button>
+      </div>
+
+      <div className="scalefoot">
+        <div className="scalefoot-txt">
+          <b>{elegido ? "Nivel registrado" : "Elegí el nivel de ambulación"}</b>
+          <span>Seleccioná una sola categoría. Exportá la evaluación para guardarla o pasar el turno.</span>
         </div>
         <div className="scalefoot-btns">
           <button className="btn solid" onClick={onCompartir}><Mi name="ios_share" />Compartir Excel</button>

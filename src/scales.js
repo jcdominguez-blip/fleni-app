@@ -54,6 +54,18 @@ export const HIMAT = [
   "Subir escalera dep", "Subir escaleras ind", "Bajar escaleras dep", "Bajar escaleras ind",
 ];
 
+// FAC — Categoría de ambulación funcional. Es una selección ÚNICA de nivel (0–5),
+// cada nivel con su descripción. No se suma: el "puntaje" es el nivel elegido.
+export const FAC_NIVELES = [
+  { nivel: 0, texto: "El paciente no puede caminar solo y necesita de 2 o más personas para hacerlo." },
+  { nivel: 1, texto: "El paciente necesita continuo soporte de 1 persona para el balance del peso corporal." },
+  { nivel: 2, texto: "Necesita el continuo o intermitente soporte de 1 persona para el balanceo y coordinación." },
+  { nivel: 3, texto: "El paciente necesita solo supervisión verbal." },
+  { nivel: 4, texto: "El paciente necesita ayuda en escaleras y superficies irregulares." },
+  { nivel: 5, texto: "El paciente puede caminar independientemente en cualquier superficie." },
+];
+export const FAC = ["Categoría de ambulación funcional"];
+
 // [clave, etiqueta, tipo, opciones?]
 export const DATOS = [
   ["apellidoNombre", "Apellido y nombre", "text"],
@@ -88,7 +100,8 @@ export const SCALES = {
   bbs:   { key: "bbs",   labels: BBS,   min: 0, max: 4, name: "Berg (BBS)", nota: "0–4 por ítem · máx 56", mejorSube: true },
   fga:   { key: "fga",   labels: FGA,   min: 0, max: 3, name: "FGA",        nota: "0–3 por ítem · máx 30", mejorSube: true },
   himat: { key: "himat", labels: HIMAT, min: 0, max: 5, name: "HIMAT",      nota: "0–5 por ítem · a confirmar", mejorSube: true },
+  fac:   { key: "fac",   labels: FAC,   min: 0, max: 5, name: "FAC",        nota: "Categoría de ambulación funcional · nivel 0–5", mejorSube: true, tipo: "categoria", niveles: FAC_NIVELES },
 };
 
 // Orden de las escalas en la app y el Excel.
-export const SCALE_KEYS = ["covs", "abs", "ampac", "bbs", "fga", "himat"];
+export const SCALE_KEYS = ["covs", "abs", "ampac", "bbs", "fga", "himat", "fac"];

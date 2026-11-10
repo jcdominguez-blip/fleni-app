@@ -90,7 +90,9 @@ export async function construirWorkbookBuffer(actual, historial = []) {
     head.getCell(2).font = { name: "Arial", bold: true, size: 9, color: { argb: C.muted } };
     head.getCell(2).alignment = { horizontal: "center" };
     s.labels.forEach((l, i) => {
-      const r = ws.addRow([`${i + 1}. ${l}`, (actual[key] || [])[i]]);
+      const raw = (actual[key] || [])[i];
+      const celda = raw === "NA" ? "No aplica" : raw;
+      const r = ws.addRow([`${i + 1}. ${l}`, celda]);
       r.getCell(1).font = { name: "Arial", size: 10, color: { argb: C.ink } };
       r.getCell(2).font = { name: "Arial", size: 10, color: { argb: C.ink } };
       r.getCell(2).alignment = { horizontal: "center" };
@@ -215,6 +217,8 @@ export async function importarExcel(file) {
     labels.map((_, i) => {
       const v = rec[`${key}_${i + 1}`];
       if (v === "" || v == null) return "";
+      // "No aplica" se guarda como sentinela "NA".
+      if (v === "NA" || String(v).trim().toLowerCase() === "no aplica") return "NA";
       const nn = Number(v);
       return Number.isFinite(nn) ? nn : "";
     });

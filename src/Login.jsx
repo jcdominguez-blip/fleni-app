@@ -4,12 +4,10 @@ import ilu from "../img/ilustracion-usuario.svg";
 
 const Mi = ({ name, className = "" }) => <span className={"mi " + className} aria-hidden="true">{name}</span>;
 
-// Credenciales del prototipo (NO es seguridad real: viven en el cliente).
-const USUARIO = "Kinefleni2026";
+// Clave del prototipo (NO es seguridad real: vive en el cliente).
 const CLAVE = "Appfleni2026";
 
 export default function Login({ onSuccess }) {
-  const [u, setU] = useState("");
   const [p, setP] = useState("");
   const [verClave, setVerClave] = useState(false);
   const [error, setError] = useState(false);
@@ -18,7 +16,7 @@ export default function Login({ onSuccess }) {
   const submit = (e) => {
     e.preventDefault();
     if (enviando) return;
-    if (u.trim() === USUARIO && p === CLAVE) {
+    if (p === CLAVE) {
       setError(false);
       setEnviando(true);
       onSuccess();
@@ -39,18 +37,6 @@ export default function Login({ onSuccess }) {
         </p>
 
         <div className="login-fields">
-          <div className="login-field">
-            <Mi name="person" className="login-ic" />
-            <input
-              className={"login-input has-ic" + (error ? " err" : "")}
-              type="text"
-              placeholder="Usuario"
-              value={u}
-              autoComplete="username"
-              autoCapitalize="none"
-              onChange={(e) => { setU(e.target.value); setError(false); }}
-            />
-          </div>
           <div className="login-field">
             <Mi name="lock" className="login-ic" />
             <input
@@ -76,7 +62,7 @@ export default function Login({ onSuccess }) {
         {error && (
           <div className="login-error" role="alert">
             <Mi name="error" className="sm" />
-            Usuario o contraseña incorrectos. Revisá los datos e intentá de nuevo.
+            Contraseña incorrecta. Revisá los datos e intentá de nuevo.
           </div>
         )}
 

@@ -64,6 +64,20 @@
 .sbtn { font-variant-numeric: tabular-nums; font-size: 14px; font-weight: 700; min-width: 40px; height: 40px; border-radius: var(--r-md); border: 1px solid var(--line); background: var(--white); color: var(--muted); transition: transform .05s, background .15s, color .15s, border-color .15s; }
 .sbtn:active { transform: scale(.95); }
 .sbtn.on { background: var(--blue); color: var(--white); border-color: var(--blue); }
+.sbtn-na { font-size: 12px; font-weight: 700; min-width: auto; padding: 0 12px; color: var(--muted); }
+.sbtn-na.on { background: var(--muted); color: var(--white); border-color: var(--muted); }
+
+/* FAC — selección única de nivel de ambulación */
+.fac-levels { display: flex; flex-direction: column; gap: 8px; }
+.fac-level { display: flex; align-items: center; gap: 14px; text-align: left; width: 100%; padding: 14px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--white); color: var(--ink); transition: border-color .15s, background .15s, box-shadow .15s; }
+.fac-level:active { transform: scale(.995); }
+.fac-level .fac-num { flex: 0 0 auto; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 999px; background: var(--surface); color: var(--muted); font-family: var(--font-display); font-weight: 800; font-size: 16px; font-variant-numeric: tabular-nums; }
+.fac-level .fac-txt { flex: 1 1 auto; font-size: 14px; font-weight: 500; line-height: 1.4; }
+.fac-level.on { border-color: var(--blue); background: var(--blue-soft, #e6f0ff); box-shadow: inset 0 0 0 1px var(--blue); }
+.fac-level.on .fac-num { background: var(--blue); color: var(--white); }
+.fac-level.fac-na .fac-txt { color: var(--muted); font-weight: 600; }
+.fac-level.fac-na.on { border-color: var(--muted); background: var(--surface); box-shadow: inset 0 0 0 1px var(--muted); }
+.fac-level.fac-na.on .fac-num { background: var(--muted); color: var(--white); }
 
 /* Tags de estado (Default / Processing / Success / Warning / Error) */
 .tag { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-display); font-size: 12px; font-weight: 700; border-radius: var(--r-pill); padding: 5px 12px 5px 10px; }
